@@ -1,0 +1,68 @@
+import { useState } from 'react'
+import type { ActionDialogProps, FieldMap } from '../../search-table/types.ts'
+
+export type SendPayload = { mode: 'draft' | 'publish' }
+
+type Row = { id: string; description: string }
+
+/** Lists what will be sent, what is skipped, and asks Draft or Publish. */
+export function SendDialog<TRow extends Row, TFields extends FieldMap>({
+  rows,
+  skippedRows,
+  selection,
+  onRemoveRow,
+  onConfirm,
+  onCancel,
+}: ActionDialogProps<TRow, TFields, SendPayload>) {
+  const [mode, setMode] = useState<SendPayload['mode']>('draft')
+  const skippedIds = new Set(skippedRows.map((r) => r.id))
+  const sendable = rows.filter((r) => !skippedIds.has(r.id))
+
+  return (
+    <div role="dialog" aria-label="Send items">
+      <h2>Send items</h2>
+      {selection.mode === 'criteria' ? (
+        <p>All matching items will be sent; the server skips ineligible ones.</p>
+      ) : (
+        <>
+          <ul>
+            {sendable.map((r) => (
+              <li key={r.id}>
+                <span>{r.id} · {r.description}</span>
+                <button type="button" className="link" onClick={() => onRemoveRow(r.id)}>
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+          {skippedRows.length > 0 && (
+            <p>
+              Skipped (already sent or rejected): {skippedRows.map((r) => r.id).join(', ')}
+            </p>
+          )}
+        </>
+      )}
+      <div className="editor">
+        {(['draft', 'publish'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            className="pill"
+            aria-pressed={mode === m}
+            onClick={() => setMode(m)}
+          >
+            {m === 'draft' ? 'Draft' : 'Publish'}
+          </button>
+        ))}
+      </div>
+      <footer>
+        <button type="button" className="btn btn--ghost" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className="btn" onClick={() => onConfirm({ mode })}>
+          {mode === 'draft' ? 'Send as draft' : 'Publish'}
+        </button>
+      </footer>
+    </div>
+  )
+}

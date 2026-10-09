@@ -5,5 +5,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.test.ts", "src/search-table/**/*.ts"],
-  "exclude": []
+  "exclude": ["src/search-table/ui"]
 }

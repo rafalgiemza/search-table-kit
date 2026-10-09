@@ -246,6 +246,8 @@ export type RowMenuContext<TRow, TFields extends FieldMap> = {
   /** Right-click on a selected row -> whole selection; otherwise just that row. */
   rows: readonly TRow[]
   selection: Selection<TFields>
+  /** Opens the page's `DetailsDialog` for the given rows. */
+  openDetails: (rows: readonly TRow[]) => void
 }
 
 /**
