@@ -50,6 +50,12 @@ import {
 } from './selection-column.tsx'
 import './search-table.css'
 
+/**
+ * "Select all N matching" is switched off while the backend search API is unreliable. With it off the
+ * table never starts a criteria selection and skips the zero-row count query; flip to bring it back.
+ */
+const SELECT_ALL_MATCHING = false
+
 /** Number of rows matching `criteria`, via a zero-row query. */
 function useMatchingCount<TRow, TFields extends FieldMap>(
   criteria: SearchCriteria<TFields>,
@@ -302,7 +308,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
   const { total: matching, failed: matchingFailed } = useMatchingCount(
     selection.kind === 'all' ? selection.criteria : matchingCriteria,
     fetchRows,
-    selectMode !== 'none' && (selection.kind === 'all' || pageAll),
+    selectMode !== 'none' && (selection.kind === 'all' || (SELECT_ALL_MATCHING && pageAll)),
   )
   // null: "all matching" whose size is not known yet (or could not be fetched). Never guess from the
   // current view's total; the snapshot's criteria may differ from it.
@@ -586,7 +592,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
       />
 
       {/* Offered only once the real size is known; the view's total ignores the page's selection predicate. */}
-      {selectMode === 'multiple' && selection.kind === 'ids' && pageAll && matching !== undefined && matching > pageCount && (
+      {SELECT_ALL_MATCHING && selectMode === 'multiple' && selection.kind === 'ids' && pageAll && matching !== undefined && matching > pageCount && (
         <div className="banner">
           All {pageCount} items on this page are selected.
           <button
