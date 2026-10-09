@@ -8,6 +8,9 @@ type Props<TRow, TFields extends FieldMap> = {
   rows: readonly TRow[]
   warning?: string
   busy: boolean
+  /** Action awaiting inline confirmation; owned by the table so the right-click menu can start it. */
+  confirming: AnyBulkAction<TRow, TFields> | null
+  onConfirming: (action: AnyBulkAction<TRow, TFields> | null) => void
   onDeselect: () => void
   /** Called for actions that need no further input from the island itself. */
   onRun: (action: AnyBulkAction<TRow, TFields>, payload?: unknown) => void
@@ -32,13 +35,14 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
   rows,
   warning,
   busy,
+  confirming,
+  onConfirming,
   onDeselect,
   onRun,
   onOpenDialog,
 }: Props<TRow, TFields>) {
   const ref = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<Position | null>(readPosition)
-  const [confirming, setConfirming] = useState<AnyBulkAction<TRow, TFields> | null>(null)
   const drag = useRef<{ dx: number; dy: number } | null>(null)
 
   useEffect(() => {
@@ -72,7 +76,7 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
 
   const start = (a: AnyBulkAction<TRow, TFields>) => {
     if (a.confirm.type === 'none') onRun(a)
-    else if (a.confirm.type === 'inline') setConfirming(a)
+    else if (a.confirm.type === 'inline') onConfirming(a)
     else onOpenDialog(a)
   }
 
@@ -110,12 +114,12 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
               disabled={busy}
               onClick={() => {
                 onRun(confirming)
-                setConfirming(null)
+                onConfirming(null)
               }}
             >
               {confirming.confirm.confirmLabel}
             </button>
-            <button type="button" className="btn btn--ghost" onClick={() => setConfirming(null)}>
+            <button type="button" className="btn btn--ghost" onClick={() => onConfirming(null)}>
               Cancel
             </button>
           </>

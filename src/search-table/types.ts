@@ -183,6 +183,8 @@ export type BulkAction<TRow, TFields extends FieldMap, TPayload = void> = {
   isApplicable?: (row: TRow) => boolean
   /** Why rows are skipped, e.g. "already sent or rejected". */
   skippedReason?: string
+  /** Offer this action in the right-click menu. Defaults to true. */
+  contextMenu?: boolean
   /**
    * `inline`  - confirm inside the floating bar (Reject).
    * `dialog`  - open a modal and collect a payload (Send: Draft / Publish).

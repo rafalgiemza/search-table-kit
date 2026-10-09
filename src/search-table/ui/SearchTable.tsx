@@ -30,6 +30,7 @@ import {
 } from '../core/selection.ts'
 import type {
   AnyBulkAction,
+  Selection,
   FieldMap,
   SavedView,
   SearchCriteria,
@@ -128,6 +129,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
   const [notice, setNotice] = useState<Notice | null>(null)
   const [busy, setBusy] = useState(false)
   const [dialogAction, setDialogAction] = useState<AnyBulkAction<TRow, TFields> | null>(null)
+  const [confirming, setConfirming] = useState<AnyBulkAction<TRow, TFields> | null>(null)
   const [details, setDetails] = useState<readonly TRow[] | null>(null)
 
   /* --------------------------- saved views --------------------------------- */
@@ -373,11 +375,17 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
     applyLayout(api, initial.layout)
   }, [api, initial.layout])
 
-  const run = async (action: AnyBulkAction<TRow, TFields>, payload?: unknown) => {
+  const run = async (
+    action: AnyBulkAction<TRow, TFields>,
+    payload?: unknown,
+    /** For the right-click menu, where state has not caught up with the click yet. */
+    override?: Selection<TFields>,
+  ) => {
     setBusy(true)
     setDialogAction(null)
+    setConfirming(null)
     try {
-      const result = await runAction(action.id, toSelection(selection), payload)
+      const result = await runAction(action.id, override ?? toSelection(selection), payload)
       say(result.message)
       setSelection(emptySelection())
       byIndex.clear()
@@ -457,26 +465,62 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
         ]
   }, [config.columns, selectMode])
 
+  /**
+   * Starts an action from the right-click menu. Right-clicking a row outside
+   * the selection acts on that row alone, so the selection is replaced first.
+   */
+  const startFromMenu = (action: AnyBulkAction<TRow, TFields>, soloId: string | null) => {
+    const solo: Selection<TFields> | undefined =
+      soloId === null ? undefined : { mode: 'ids', ids: [soloId] }
+    if (soloId !== null) setSelection({ kind: 'ids', ids: new Set([soloId]) })
+    if (action.confirm.type === 'none') void run(action, undefined, solo)
+    else if (action.confirm.type === 'inline') setConfirming(action)
+    else setDialogAction(action)
+  }
+
   const getContextMenuItems = (
     params: GetContextMenuItemsParams<TRow>,
   ): (MenuItemDef<TRow> | DefaultMenuItem)[] => {
-    const node = params.node?.data
-    const rows: TRow[] =
-      node === undefined
-        ? []
-        : selection.kind === 'ids' && isSelected(selection, config.getRowId(node))
-          ? selectedRows
-          : [node]
-    const custom: (MenuItemDef<TRow> | DefaultMenuItem)[] =
-      rows.length > 0
-        ? (config.extensions?.rowMenuItems?.({
-            rows,
-            selection: toSelection(selection),
-            openDetails: setDetails,
-          }) ?? [])
-        : []
     const standard: DefaultMenuItem[] = ['copy', 'copyWithHeaders', 'paste', 'separator', 'export']
-    return custom.length ? [...custom, 'separator', ...standard] : standard
+    const clicked = params.node?.data
+    if (clicked === undefined) return standard
+
+    // Right-click on a selected row means the whole selection; otherwise just that row.
+    const id = config.getRowId(clicked)
+    const inSelection = isSelected(selection, id)
+    const rows: TRow[] =
+      inSelection && selection.kind === 'ids' ? selectedRows : [clicked]
+    const menuSelection: Selection<TFields> = inSelection
+      ? toSelection(selection)
+      : { mode: 'ids', ids: [id] }
+
+    const custom: (MenuItemDef<TRow> | DefaultMenuItem)[] =
+      config.extensions?.rowMenuItems?.({
+        rows,
+        selection: menuSelection,
+        openDetails: setDetails,
+      }) ?? []
+
+    // Bulk actions, each with its own rule (`isApplicable`), independent of
+    // whether the row may be ticked. "All matching" cannot be counted here.
+    const canAct = selectMode !== 'none' && (inSelection || isSelectable(clicked))
+    const actionItems: MenuItemDef<TRow>[] = !canAct
+      ? []
+      : actions
+          .filter((a) => a.contextMenu !== false)
+          .map((a) => {
+            const applicable = a.isApplicable ? rows.filter(a.isApplicable).length : rows.length
+            const partial = selection.kind === 'ids' && rows.length > 1 && applicable < rows.length
+            return {
+              name: partial ? `${a.label} (${applicable} of ${rows.length})` : a.label,
+              disabled: selection.kind === 'ids' || !inSelection ? applicable === 0 : false,
+              tooltip: applicable === 0 ? `Not applicable: ${a.skippedReason ?? 'rows do not qualify'}` : undefined,
+              action: () => startFromMenu(a, inSelection ? null : id),
+            }
+          })
+
+    const groups = [custom, actionItems, standard].filter((g) => g.length > 0)
+    return groups.flatMap((g, i) => (i === 0 ? g : ['separator' as const, ...g]))
   }
 
   const skippedFor = (a: AnyBulkAction<TRow, TFields>) =>
@@ -571,6 +615,8 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
               actions={actions}
               rows={selectedRows}
               busy={busy}
+              confirming={confirming}
+              onConfirming={setConfirming}
               warning={
                 selectionDiffersFromView(selection, matchingCriteria)
                   ? 'Selected under different filters'
