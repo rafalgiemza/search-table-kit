@@ -1,7 +1,50 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import styled from 'styled-components'
 import { clampPosition, parsePosition, type Position, type Size } from '../core/island.ts'
 import { skipEstimate } from '../core/selection.ts'
 import type { AnyBulkAction, FieldMap } from '../types.ts'
+import { Button } from './styles.ts'
+
+const Island = styled.div`
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: stretch;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+`
+const Handle = styled.div`
+  display: grid;
+  place-items: center;
+  width: 24px;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  border-right: 1px solid var(--border);
+
+  &:active { cursor: grabbing; }
+`
+const Body = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+`
+const Status = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`
+const Warning = styled.span`
+  color: var(--warning);
+  font-size: 12px;
+`
 
 type Props<TRow, TFields extends FieldMap> = {
   /** null while the size of an "all matching" selection is unknown; actions are disabled then. */
@@ -156,15 +199,13 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
   }
 
   return (
-    <div
+    <Island
       ref={ref}
-      className="island"
       role="group"
       aria-label="Selection actions"
       style={position ? { left: position.x, top: position.y, bottom: 'auto', transform: 'none' } : undefined}
     >
-      <div
-        className="island__handle"
+      <Handle
         title="Drag to move"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -173,14 +214,14 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
         onLostPointerCapture={endDrag}
       >
         <span aria-hidden="true">⠿</span>
-      </div>
+      </Handle>
 
-      <div className="island__body">
+      <Body>
         {/* group, not toolbar: toolbar promises arrow-key navigation, plain Tab order is what we provide */}
-        <span role="status" className="island__status">
+        <Status role="status">
           <strong>{count === null ? (countFailed ? 'Count unavailable' : 'Counting…') : `${count} selected`}</strong>
-          {warning && <span className="island__warning">{warning}</span>}
-        </span>
+          {warning && <Warning>{warning}</Warning>}
+        </Status>
 
         {confirming && confirming.confirm.type === 'inline' ? (
           <>
@@ -188,10 +229,10 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
               {confirming.confirm.message}
               {skipNote(confirming)}
             </span>
-            <button
+            <Button
               ref={confirmRef}
               type="button"
-              className={`btn btn--${confirming.tone ?? 'default'}`}
+              $tone={confirming.tone}
               disabled={busy}
               onClick={() => {
                 onRun(confirming)
@@ -199,35 +240,37 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
               }}
             >
               {confirming.confirm.confirmLabel}
-            </button>
-            <button type="button" className="btn btn--ghost" onClick={() => onConfirming(null)}>
+            </Button>
+            <Button type="button" $ghost onClick={() => onConfirming(null)}>
               Cancel
-            </button>
+            </Button>
           </>
         ) : (
           <>
-            <button type="button" className="btn btn--ghost" onClick={onDeselect}>
+            <Button type="button" $ghost onClick={onDeselect}>
               Deselect
-            </button>
-            {actions.map((a) => (
-              <button
+            </Button>
+            {actions.map((a, i) => (
+              <Button
                 key={a.id}
                 ref={(el) => {
                   if (el) actionButtons.current.set(a.id, el)
                   else actionButtons.current.delete(a.id)
                 }}
                 type="button"
-                className={`btn btn--${a.tone ?? 'default'}`}
+                $tone={a.tone}
+                // The last action is the call to action, unless it is destructive.
+                $primary={a.tone !== 'danger' && i === actions.length - 1}
                 disabled={busy || count === null}
                 onClick={() => start(a)}
               >
                 {a.icon}
                 {a.label}
-              </button>
+              </Button>
             ))}
           </>
         )}
-      </div>
-    </div>
+      </Body>
+    </Island>
   )
 }

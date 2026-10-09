@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import styled from 'styled-components'
 import { activeFilterIds } from '../core/criteria.ts'
 import type { SearchAction } from '../core/search-state.ts'
 import type {
@@ -11,6 +12,56 @@ import type {
 } from '../types.ts'
 import { EditorFor, uiFor } from './filter-kinds.tsx'
 import { Popover } from './Popover.tsx'
+import { Anchor, Button } from './styles.ts'
+
+const Bar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+`
+const SearchBox = styled.input`
+  min-width: 260px;
+  padding: 7px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+`
+const Chip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+
+  & button { background: none; border: 0; color: var(--text); padding: 5px 10px; cursor: pointer; }
+  & button:last-child { color: var(--muted); padding-left: 4px; }
+  & button:last-child:hover { color: var(--danger); }
+  & b { color: var(--accent); font-weight: 600; }
+`
+const FieldList = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  & button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding: 7px 8px;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+  }
+  & button:hover { background: var(--panel-2); }
+  & span { color: var(--muted); font-size: 12px; }
+`
 
 type Props<TFields extends FieldMap> = {
   config: Pick<SearchPageConfig<never, TFields>, 'fields'>
@@ -69,22 +120,21 @@ export function FilterBar<TFields extends FieldMap>({
   )
 
   return (
-    <div className="filter-bar">
-      <input
-        className="search-box"
+    <Bar>
+      <SearchBox
         type="search"
         placeholder="Search by description"
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
       />
 
-      <div className="filter-anchor">
-        <button type="button" className="btn" onClick={() => setPicking(true)}>
+      <Anchor>
+        <Button type="button" onClick={() => setPicking(true)}>
           + Filter
-        </button>
+        </Button>
         {picking && editing === null && (
           <Popover onClose={() => setPicking(false)}>
-            <ul className="field-list">
+            <FieldList>
               {(Object.keys(fields) as Id[]).map((id) => (
                 <li key={id}>
                   <button type="button" onClick={() => setEditing(id)}>
@@ -93,17 +143,17 @@ export function FilterBar<TFields extends FieldMap>({
                   </button>
                 </li>
               ))}
-            </ul>
+            </FieldList>
           </Popover>
         )}
         {picking && editing !== null && !active.includes(editing) && editor(editing)}
-      </div>
+      </Anchor>
 
       {active.map((id) => {
         const field = fields[id]
         return (
-          <div key={id} className="filter-anchor">
-            <span className="chip">
+          <Anchor key={id}>
+            <Chip>
               <button type="button" onClick={() => setEditing(id)}>
                 <b>{field.label}</b> {uiFor(field).format(criteria.filters[id] as never, field)}
               </button>
@@ -114,17 +164,17 @@ export function FilterBar<TFields extends FieldMap>({
               >
                 ×
               </button>
-            </span>
+            </Chip>
             {editing === id && editor(id)}
-          </div>
+          </Anchor>
         )
       })}
 
       {active.length > 0 && (
-        <button type="button" className="btn btn--ghost" onClick={onClearAll}>
+        <Button type="button" $ghost onClick={onClearAll}>
           Clear all
-        </button>
+        </Button>
       )}
-    </div>
+    </Bar>
   )
 }

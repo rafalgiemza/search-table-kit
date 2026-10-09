@@ -16,7 +16,8 @@
     "ag-grid-enterprise": "36.2.0",
     "ag-grid-react": "^36.2.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "styled-components": "^6.5.3"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
