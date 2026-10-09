@@ -634,6 +634,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
           <dialogAction.confirm.Dialog
             rows={selectedRows}
             skippedRows={skippedFor(dialogAction)}
+            count={count}
             selection={toSelection(selection)}
             onRemoveRow={(id) => setSelection((s) => setRowSelected(s, id, false))}
             onConfirm={(payload) => void run(dialogAction, payload)}

@@ -168,6 +168,8 @@ export type ActionDialogProps<TRow, TFields extends FieldMap, TPayload> = {
   rows: readonly TRow[]
   /** Subset of `rows` the action will skip (`isApplicable` returned false). */
   skippedRows: readonly TRow[]
+  /** Size of the whole selection; larger than `rows` when it is not fully loaded ("all matching"). */
+  count: number
   selection: Selection<TFields>
   onRemoveRow: (id: string) => void
   onConfirm: (payload: TPayload) => void
