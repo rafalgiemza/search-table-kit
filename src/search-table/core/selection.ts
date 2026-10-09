@@ -1,5 +1,5 @@
 import type { FieldMap, SearchCriteria, Selection, SelectionPolicy } from '../types.ts'
-import { criteriaEqual, withPredicate } from './criteria.ts'
+import { withPredicate } from './criteria.ts'
 
 /**
  * `ids`: explicit rows. `all`: "everything matching `criteria`" minus
@@ -63,12 +63,6 @@ export const selectedCount = <TFields extends FieldMap>(
   totalMatching: number,
 ) =>
   state.kind === 'ids' ? state.ids.size : Math.max(0, totalMatching - state.excluded.size)
-
-/** True when the selection was made under different criteria than the current ones. */
-export const selectionDiffersFromView = <TFields extends FieldMap>(
-  state: SelectionState<TFields>,
-  current: SearchCriteria<TFields>,
-) => state.kind === 'all' && !criteriaEqual(state.criteria, current)
 
 /** The shape handed to `runAction`. */
 export const toSelection = <TFields extends FieldMap>(

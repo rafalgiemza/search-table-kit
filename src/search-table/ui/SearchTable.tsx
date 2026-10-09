@@ -22,7 +22,6 @@ import {
   isSelected,
   selectAllMatching,
   selectedCount,
-  selectionDiffersFromView,
   setPageSelected,
   setRowSelected,
   toSelection,
@@ -58,17 +57,30 @@ function useMatchingCount<TRow, TFields extends FieldMap>(
   enabled: boolean,
 ) {
   const key = JSON.stringify(criteria)
-  const [result, setResult] = useState<{ key: string; total: number }>()
+  const [result, setResult] = useState<{ key: string; total?: number }>()
   useEffect(() => {
     if (!enabled) return
     const controller = new AbortController()
     fetchRows(toQuery(JSON.parse(key), { startRow: 0, endRow: 0 }), controller.signal)
       .then((r) => setResult({ key, total: r.total }))
-      .catch(() => undefined)
+      .catch(() => {
+        if (!controller.signal.aborted) setResult({ key })
+      })
     return () => controller.abort()
   }, [key, enabled, fetchRows])
-  return result?.key === key ? result.total : undefined
+  const current = result?.key === key ? result : undefined
+  return { total: current?.total, failed: current !== undefined && current.total === undefined }
 }
+
+/** Sort as the grid currently has it; the grid is the source of truth for header clicks. */
+const readSort = (api?: GridApi) =>
+  (api?.getColumnState() ?? [])
+    .filter((c) => c.sort)
+    .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+    .map((c) => ({ colId: c.colId, direction: c.sort! }))
+
+const queryKey = (c: { search: unknown; filters: unknown }, sort: unknown) =>
+  JSON.stringify([c.search, c.filters, sort])
 
 type Notice = { text: string; action?: { label: string; run: () => void } }
 
@@ -128,6 +140,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
   const [modelTick, setModelTick] = useState(0)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [busy, setBusy] = useState(false)
+  const busyRef = useRef(false)
   const [dialogAction, setDialogAction] = useState<AnyBulkAction<TRow, TFields> | null>(null)
   const [confirming, setConfirming] = useState<AnyBulkAction<TRow, TFields> | null>(null)
   const [details, setDetails] = useState<readonly TRow[] | null>(null)
@@ -172,16 +185,20 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
         const { startRow = 0, endRow = pageSize, sortModel } = params.request
         // Sort comes from the grid (it is the source of truth for header clicks).
         const sort = sortModel.map((s) => ({ colId: s.colId, direction: s.sort }))
+        const sent = queryKey(criteriaRef.current, sort)
         try {
           const result = await fetchRows(
             toQuery({ ...criteriaRef.current, sort }, { startRow, endRow }),
             new AbortController().signal,
           )
+          // A newer search/sort may have started meanwhile. Its rows must not leak into the page
+          // index or total, or "select page" would pick ids that are not on screen.
+          const stale = sent !== queryKey(criteriaRef.current, readSort(params.api))
           result.rows.forEach((r, i) => {
             seen.set(config.getRowId(r), r)
-            byIndex.set(startRow + i, r)
+            if (!stale) byIndex.set(startRow + i, r)
           })
-          setTotal(result.total)
+          if (!stale) setTotal(result.total)
           params.success({ rowData: result.rows, rowCount: result.total })
         } catch {
           params.fail()
@@ -197,6 +214,8 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
   useEffect(() => {
     if (!api || lastKey.current === filtersKey) return
     lastKey.current = filtersKey
+    // A selection that outlives the filters would act on rows the user can no longer see.
+    setSelection((s) => (s.kind === 'ids' && s.ids.size === 0 ? s : emptySelection()))
     byIndex.clear()
     api.paginationGoToFirstPage()
     api.refreshServerSide({ purge: true })
@@ -204,14 +223,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
 
   // Sort: grid -> criteria (header click) and criteria -> grid (undo, views).
   const sortKey = JSON.stringify(criteria.sort)
-  const readGridSort = useCallback(
-    () =>
-      (api?.getColumnState() ?? [])
-        .filter((c) => c.sort)
-        .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
-        .map((c) => ({ colId: c.colId, direction: c.sort! })),
-    [api],
-  )
+  const readGridSort = useCallback(() => readSort(api), [api])
   useEffect(() => {
     if (!api || JSON.stringify(readGridSort()) === sortKey) return
     byIndex.clear()
@@ -263,7 +275,8 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
         : setRowSelected(s, id, on),
     )
 
-  const togglePage = (on: boolean) =>
+  const togglePage = (on: boolean) => {
+    if (selectMode !== 'multiple') return
     setSelection((s) =>
       setPageSelected(
         s,
@@ -271,6 +284,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
         on,
       ),
     )
+  }
 
   const selectedRows = useMemo(
     () =>
@@ -285,12 +299,19 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
     () => withPredicate(criteria, policy?.criteriaPredicate),
     [criteria, policy],
   )
-  const matching = useMatchingCount(
+  const { total: matching, failed: matchingFailed } = useMatchingCount(
     selection.kind === 'all' ? selection.criteria : matchingCriteria,
     fetchRows,
     selectMode !== 'none' && (selection.kind === 'all' || pageAll),
   )
-  const count = selection.kind === 'all' ? selectedCount(selection, matching ?? total) : selectedCount(selection, total)
+  // null: "all matching" whose size is not known yet (or could not be fetched). Never guess from the
+  // current view's total; the snapshot's criteria may differ from it.
+  const count: number | null =
+    selection.kind === 'ids'
+      ? selectedCount(selection, total)
+      : matching === undefined
+        ? null
+        : selectedCount(selection, matching)
 
   /* ------------------------------ actions --------------------------------- */
 
@@ -381,6 +402,9 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
     /** For the right-click menu, where state has not caught up with the click yet. */
     override?: Selection<TFields>,
   ) => {
+    // Guards the right-click menu too, which does not see the island's disabled buttons.
+    if (busyRef.current || (count === null && !override)) return
+    busyRef.current = true
     setBusy(true)
     setDialogAction(null)
     setConfirming(null)
@@ -393,6 +417,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
     } catch {
       say(`${action.label} failed`)
     } finally {
+      busyRef.current = false
       setBusy(false)
     }
   }
@@ -452,7 +477,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
       : [
           {
             colId: SELECT_COL_ID,
-            headerComponent: SelectHeader,
+            headerComponent: selectMode === 'multiple' ? SelectHeader : undefined,
             cellRenderer: SelectCell,
             width: 48,
             pinned: 'left',
@@ -513,7 +538,10 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
             const partial = selection.kind === 'ids' && rows.length > 1 && applicable < rows.length
             return {
               name: partial ? `${a.label} (${applicable} of ${rows.length})` : a.label,
-              disabled: selection.kind === 'ids' || !inSelection ? applicable === 0 : false,
+              disabled:
+                busy ||
+                (inSelection && count === null) ||
+                (selection.kind === 'ids' || !inSelection ? applicable === 0 : false),
               tooltip: applicable === 0 ? `Not applicable: ${a.skippedReason ?? 'rows do not qualify'}` : undefined,
               action: () => startFromMenu(a, inSelection ? null : id),
             }
@@ -571,7 +599,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
       )}
       {selection.kind === 'all' && (
         <div className="banner">
-          All {count} matching items are selected.
+          {count === null ? 'All matching items are selected.' : `All ${count} matching items are selected.`}
           <button type="button" className="link" onClick={() => setSelection(emptySelection())}>
             Clear selection
           </button>
@@ -602,7 +630,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
           }}
         />
 
-        {count > 0 &&
+        {(count === null || count > 0) &&
           (Bar ? (
             <Bar
               selection={toSelection(selection)}
@@ -617,11 +645,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
               busy={busy}
               confirming={confirming}
               onConfirming={setConfirming}
-              warning={
-                selectionDiffersFromView(selection, matchingCriteria)
-                  ? 'Selected under different filters'
-                  : undefined
-              }
+              countFailed={matchingFailed}
               onDeselect={() => setSelection(emptySelection())}
               onRun={run}
               onOpenDialog={setDialogAction}
@@ -634,7 +658,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
           <dialogAction.confirm.Dialog
             rows={selectedRows}
             skippedRows={skippedFor(dialogAction)}
-            count={count}
+            count={count ?? 0}
             selection={toSelection(selection)}
             onRemoveRow={(id) => setSelection((s) => setRowSelected(s, id, false))}
             onConfirm={(payload) => void run(dialogAction, payload)}

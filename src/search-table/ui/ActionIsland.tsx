@@ -4,7 +4,9 @@ import { skipEstimate } from '../core/selection.ts'
 import type { AnyBulkAction, FieldMap } from '../types.ts'
 
 type Props<TRow, TFields extends FieldMap> = {
-  count: number
+  /** null while the size of an "all matching" selection is unknown; actions are disabled then. */
+  count: number | null
+  countFailed?: boolean
   actions: readonly AnyBulkAction<TRow, TFields>[]
   /** Loaded rows of the selection; empty for "all matching" selections. */
   rows: readonly TRow[]
@@ -44,6 +46,7 @@ const boundsOf = (parent: Element): Size => ({ width: parent.clientWidth, height
 /** Floating bar over the grid. Drag it by the handle; position is remembered until the container is resized. */
 export function ActionIsland<TRow, TFields extends FieldMap>({
   count,
+  countFailed,
   actions,
   rows,
   warning,
@@ -140,7 +143,7 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
   /** Empty when nothing is known to be skipped; hedged when part of the selection is not loaded. */
   const skipNote = (a: AnyBulkAction<TRow, TFields>) => {
     if (!a.isApplicable) return ''
-    const { skipped, complete } = skipEstimate(rows, count, a.isApplicable)
+    const { skipped, complete } = skipEstimate(rows, count ?? Number.POSITIVE_INFINITY, a.isApplicable)
     const reason = a.skippedReason ?? 'not applicable'
     if (complete) return skipped > 0 ? ` (${skipped} will be skipped: ${reason})` : ''
     return ` (${skipped > 0 ? `${skipped}+` : 'some'} may be skipped: ${reason})`
@@ -175,7 +178,7 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
       <div className="island__body">
         {/* group, not toolbar: toolbar promises arrow-key navigation, plain Tab order is what we provide */}
         <span role="status" className="island__status">
-          <strong>{count} selected</strong>
+          <strong>{count === null ? (countFailed ? 'Count unavailable' : 'Counting…') : `${count} selected`}</strong>
           {warning && <span className="island__warning">{warning}</span>}
         </span>
 
@@ -215,7 +218,7 @@ export function ActionIsland<TRow, TFields extends FieldMap>({
                 }}
                 type="button"
                 className={`btn btn--${a.tone ?? 'default'}`}
-                disabled={busy}
+                disabled={busy || count === null}
                 onClick={() => start(a)}
               >
                 {a.icon}
