@@ -1,8 +1,46 @@
 import { useEffect, useMemo, useState } from 'react'
-import './App.css'
+import styled from 'styled-components'
 import { createSearchApi } from './api/search-api.ts'
+import { GlobalStyle } from './GlobalStyle.ts'
 import { pages, type AnyPage } from './divisions/registry.ts'
 import { SearchTable } from './search-table/ui/SearchTable.tsx'
+
+const Shell = styled.div`
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  height: 100vh;
+  min-width: 1280px;
+`
+const Nav = styled.nav`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 10px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+`
+const NavBrand = styled.div`
+  padding: 4px 10px 14px;
+  font-weight: 700;
+  color: var(--accent);
+`
+const NavLink = styled.a`
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+
+  &:hover { color: var(--text); background: var(--panel-2); }
+  &[aria-current='page'] {
+    color: var(--text);
+    background: var(--panel-2);
+    box-shadow: inset 2px 0 var(--accent);
+  }
+`
+const Main = styled.main`
+  min-width: 0;
+  min-height: 0;
+`
 
 const currentId = () => location.hash.replace(/^#\//, '') || pages[0]!.id
 
@@ -27,18 +65,19 @@ export default function App() {
   const page = pages.find((p) => p.id === id) ?? pages[0]!
 
   return (
-    <div className="shell">
-      <nav className="nav" aria-label="Divisions">
-        <div className="nav__brand">Factory</div>
+    <Shell>
+      <GlobalStyle />
+      <Nav aria-label="Divisions">
+        <NavBrand>Factory</NavBrand>
         {pages.map((p) => (
-          <a key={p.id} href={`#/${p.id}`} aria-current={p.id === page.id ? 'page' : undefined}>
+          <NavLink key={p.id} href={`#/${p.id}`} aria-current={p.id === page.id ? 'page' : undefined}>
             {p.title}
-          </a>
+          </NavLink>
         ))}
-      </nav>
-      <main className="main">
+      </Nav>
+      <Main>
         <DivisionPage key={page.id} page={page} />
-      </main>
-    </div>
+      </Main>
+    </Shell>
   )
 }

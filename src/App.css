@@ -1,7 +1,0 @@
-.shell { display: grid; grid-template-columns: 200px 1fr; height: 100vh; min-width: 1280px; }
-.nav { display: flex; flex-direction: column; gap: 2px; padding: 16px 10px; background: var(--panel); border-right: 1px solid var(--border); }
-.nav__brand { padding: 4px 10px 14px; font-weight: 700; color: var(--accent); }
-.nav a { padding: 8px 10px; border-radius: 6px; color: var(--muted); text-decoration: none; }
-.nav a:hover { color: var(--text); background: var(--panel-2); }
-.nav a[aria-current='page'] { color: var(--text); background: var(--panel-2); box-shadow: inset 2px 0 var(--accent); }
-.main { min-width: 0; min-height: 0; }

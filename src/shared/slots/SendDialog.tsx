@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ActionDialogProps, FieldMap } from '../../search-table/types.ts'
+import { Button, Controls, LinkButton, Pill } from '../../search-table/ui/styles.ts'
 
 export type SendPayload = { mode: 'draft' | 'publish' }
 
@@ -35,9 +36,9 @@ export function SendDialog<TRow extends Row, TFields extends FieldMap>({
             {sendable.map((r) => (
               <li key={r.id}>
                 <span>{r.id} · {r.description}</span>
-                <button type="button" className="link" onClick={() => onRemoveRow(r.id)}>
+                <LinkButton type="button" onClick={() => onRemoveRow(r.id)}>
                   Remove
-                </button>
+                </LinkButton>
               </li>
             ))}
           </ul>
@@ -54,26 +55,25 @@ export function SendDialog<TRow extends Row, TFields extends FieldMap>({
           )}
         </>
       )}
-      <div className="editor">
+      <Controls>
         {(['draft', 'publish'] as const).map((m) => (
-          <button
+          <Pill
             key={m}
             type="button"
-            className="pill"
             aria-pressed={mode === m}
             onClick={() => setMode(m)}
           >
             {m === 'draft' ? 'Draft' : 'Publish'}
-          </button>
+          </Pill>
         ))}
-      </div>
+      </Controls>
       <footer>
-        <button type="button" className="btn btn--ghost" onClick={onCancel}>
+        <Button type="button" $ghost onClick={onCancel}>
           Cancel
-        </button>
-        <button type="button" className="btn" onClick={() => onConfirm({ mode })}>
+        </Button>
+        <Button type="button" onClick={() => onConfirm({ mode })}>
           {mode === 'draft' ? 'Send as draft' : 'Publish'}
-        </button>
+        </Button>
       </footer>
     </div>
   )

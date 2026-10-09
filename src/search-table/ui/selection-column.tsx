@@ -1,5 +1,15 @@
 import type { CustomCellRendererProps, CustomHeaderProps, CustomNoRowsOverlayProps } from 'ag-grid-react'
 import { useEffect, useRef } from 'react'
+import styled from 'styled-components'
+import { Button } from './styles.ts'
+
+const Empty = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+`
 
 /**
  * What the grid's own renderers need from the table. Passed as AG Grid
@@ -56,13 +66,13 @@ export const SelectHeader = ({ context }: CustomHeaderProps) => {
 export const NoRows = ({ context }: CustomNoRowsOverlayProps) => {
   const ctx = context as GridContext
   return (
-    <div className="empty">
+    <Empty>
       <p>No results match.</p>
       {ctx.hasFilters && (
-        <button type="button" className="btn" onClick={ctx.clearAll}>
+        <Button type="button" onClick={ctx.clearAll}>
           Clear all filters
-        </button>
+        </Button>
       )}
-    </div>
+    </Empty>
   )
 }

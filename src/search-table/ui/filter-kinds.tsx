@@ -8,6 +8,7 @@ import type {
   FilterOption,
   QuickDateRange,
 } from '../types.ts'
+import { Check, Controls, Pill } from './styles.ts'
 
 /** How a filter kind is edited, shown on a chip and recognised as empty. */
 type KindUi<K extends FilterKind> = {
@@ -107,7 +108,7 @@ function formatDate(v: DateFilterValue) {
 function TextEditor({ value, onChange }: FilterEditorProps<'text'>) {
   const current = value ?? { condition: 'contains' as const, value: '' }
   return (
-    <div className="editor">
+    <Controls>
       <select
         value={current.condition}
         onChange={(e) =>
@@ -122,7 +123,7 @@ function TextEditor({ value, onChange }: FilterEditorProps<'text'>) {
         value={current.value}
         onChange={(e) => onChange({ ...current, value: e.target.value })}
       />
-    </div>
+    </Controls>
   )
 }
 
@@ -137,7 +138,7 @@ function MultiSelectEditor({ field, value, onChange }: FilterEditorProps<'multiS
         : [...current.values, v],
     })
   return (
-    <div className="editor editor--column">
+    <Controls $column>
       <select
         value={current.condition}
         onChange={(e) =>
@@ -148,16 +149,16 @@ function MultiSelectEditor({ field, value, onChange }: FilterEditorProps<'multiS
         <option value="notIn">is none of</option>
       </select>
       {options.map((o) => (
-        <label key={o.value} className="check">
+        <Check key={o.value}>
           <input
             type="checkbox"
             checked={current.values.includes(o.value)}
             onChange={() => toggle(o.value)}
           />
           {o.label}
-        </label>
+        </Check>
       ))}
-    </div>
+    </Controls>
   )
 }
 
@@ -174,7 +175,7 @@ function IdListEditor({ value, onChange }: FilterEditorProps<'idList'>) {
       prefix: nextPrefix || undefined,
     })
   return (
-    <div className="editor editor--column">
+    <Controls $column>
       <textarea
         autoFocus
         rows={5}
@@ -193,7 +194,7 @@ function IdListEditor({ value, onChange }: FilterEditorProps<'idList'>) {
           emit(text, e.target.value)
         }}
       />
-    </div>
+    </Controls>
   )
 }
 
@@ -208,7 +209,7 @@ function DateEditor({ field, value, onChange }: FilterEditorProps<'date'>) {
     else onChange({ condition, date: '' })
   }
   return (
-    <div className="editor editor--column">
+    <Controls $column>
       <select value={current.condition} onChange={(e) => set(e.target.value as never)}>
         {allowed.map((c) => (
           <option key={c} value={c}>
@@ -217,7 +218,7 @@ function DateEditor({ field, value, onChange }: FilterEditorProps<'date'>) {
         ))}
       </select>
       {current.condition === 'between' && (
-        <div className="editor">
+        <Controls>
           <input
             type="date"
             value={current.from ?? ''}
@@ -228,7 +229,7 @@ function DateEditor({ field, value, onChange }: FilterEditorProps<'date'>) {
             value={current.to ?? ''}
             onChange={(e) => onChange({ ...current, to: e.target.value || undefined })}
           />
-        </div>
+        </Controls>
       )}
       {(current.condition === 'before' || current.condition === 'after') && (
         <input
@@ -239,47 +240,45 @@ function DateEditor({ field, value, onChange }: FilterEditorProps<'date'>) {
       )}
       {current.condition === 'quick' && (
         <>
-          <div className="editor editor--wrap">
+          <Controls $wrap>
             {(Object.keys(quickLabels) as QuickDateRange[]).map((range) => (
-              <button
+              <Pill
                 key={range}
                 type="button"
-                className="pill"
                 aria-pressed={current.range === range}
                 onClick={() => onChange({ ...current, range })}
               >
                 {quickLabels[range]}
-              </button>
+              </Pill>
             ))}
-          </div>
-          <label className="check">
+          </Controls>
+          <Check>
             <input
               type="checkbox"
               checked={current.relative}
               onChange={(e) => onChange({ ...current, relative: e.target.checked })}
             />
             Keep relative (recalculate each time)
-          </label>
+          </Check>
         </>
       )}
-    </div>
+    </Controls>
   )
 }
 
 function BooleanEditor({ value, onChange }: FilterEditorProps<'boolean'>) {
   return (
-    <div className="editor">
+    <Controls>
       {[true, false].map((v) => (
-        <button
+        <Pill
           key={String(v)}
           type="button"
-          className="pill"
           aria-pressed={value?.value === v}
           onClick={() => onChange({ condition: 'is', value: v })}
         >
           {v ? 'Yes' : 'No'}
-        </button>
+        </Pill>
       ))}
-    </div>
+    </Controls>
   )
 }

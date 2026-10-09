@@ -8,6 +8,7 @@ import type {
 } from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import styled from 'styled-components'
 import { toQuery, withPredicate } from '../core/criteria.ts'
 import { useSearchState } from '../core/search-state.ts'
 import {
@@ -48,7 +49,85 @@ import {
   SelectHeader,
   type GridContext,
 } from './selection-column.tsx'
-import './search-table.css'
+import { LinkButton } from './styles.ts'
+
+const Page = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  padding: 16px 20px;
+  position: relative;
+`
+const PageHead = styled.header`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  & h1 { font-size: 18px; font-weight: 600; margin: 0; }
+`
+const Banner = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+`
+/** The grid takes everything that is left. */
+const GridArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  position: relative;
+
+  & > div:first-child { height: 100%; }
+
+  /* Header filter icon for columns with an active filter (class set via the column's headerClass). */
+  & .has-filter .ag-header-cell-text::after { content: ' ⏷'; color: var(--accent); }
+`
+/** Backdrop for page slots; the slot's own root becomes the dialog card. */
+const Modal = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.6);
+
+  & > * {
+    min-width: 420px;
+    max-width: 640px;
+    max-height: 80vh;
+    overflow: auto;
+    padding: 18px;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: static;
+  }
+  & h2 { margin: 0 0 12px; font-size: 16px; }
+  & ul { list-style: none; margin: 0 0 12px; padding: 0; }
+  & li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+  & footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+`
+const Toast = styled.div`
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+`
 
 /**
  * "Select all N matching" is switched off while the backend search API is unreliable. With it off the
@@ -564,8 +643,8 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
   const Bar = ext?.SelectionBar
 
   return (
-    <section className="search-page">
-      <header className="search-page__head">
+    <Page>
+      <PageHead>
         <h1>{config.title}</h1>
         <SavedViews
           views={views}
@@ -582,7 +661,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
           onSetDefault={(id) => void makeDefault(id)}
           onReset={() => loadView(activeView, `Reset to “${activeView.name}”`)}
         />
-      </header>
+      </PageHead>
 
       <FilterBar
         config={config}
@@ -593,27 +672,23 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
 
       {/* Offered only once the real size is known; the view's total ignores the page's selection predicate. */}
       {SELECT_ALL_MATCHING && selectMode === 'multiple' && selection.kind === 'ids' && pageAll && matching !== undefined && matching > pageCount && (
-        <div className="banner">
+        <Banner>
           All {pageCount} items on this page are selected.
-          <button
-            type="button"
-            className="link"
-            onClick={() => setSelection(selectAllMatching(criteria, policy))}
-          >
+          <LinkButton type="button" onClick={() => setSelection(selectAllMatching(criteria, policy))}>
             Select all {matching} matching
-          </button>
-        </div>
+          </LinkButton>
+        </Banner>
       )}
       {selection.kind === 'all' && (
-        <div className="banner">
+        <Banner>
           {count === null ? 'All matching items are selected.' : `All ${count} matching items are selected.`}
-          <button type="button" className="link" onClick={() => setSelection(emptySelection())}>
+          <LinkButton type="button" onClick={() => setSelection(emptySelection())}>
             Clear selection
-          </button>
-        </div>
+          </LinkButton>
+        </Banner>
       )}
 
-      <div className="grid-area">
+      <GridArea>
         <AgGridReact<TRow>
           theme={gridTheme}
           columnDefs={columnDefs}
@@ -658,10 +733,10 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
               onOpenDialog={setDialogAction}
             />
           ))}
-      </div>
+      </GridArea>
 
       {dialogAction?.confirm.type === 'dialog' && (
-        <div className="modal">
+        <Modal>
           <dialogAction.confirm.Dialog
             rows={selectedRows}
             skippedRows={skippedFor(dialogAction)}
@@ -671,32 +746,31 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
             onConfirm={(payload) => void run(dialogAction, payload)}
             onCancel={() => setDialogAction(null)}
           />
-        </div>
+        </Modal>
       )}
 
       {details && ext?.DetailsDialog && (
-        <div className="modal">
+        <Modal>
           <ext.DetailsDialog rows={details} onClose={() => setDetails(null)} />
-        </div>
+        </Modal>
       )}
 
       {notice && (
-        <div className="toast" role="status">
+        <Toast role="status">
           {notice.text}
           {notice.action && (
-            <button
+            <LinkButton
               type="button"
-              className="link"
               onClick={() => {
                 notice.action!.run()
                 setNotice(null)
               }}
             >
               {notice.action.label}
-            </button>
+            </LinkButton>
           )}
-        </div>
+        </Toast>
       )}
-    </section>
+    </Page>
   )
 }

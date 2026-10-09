@@ -26,7 +26,8 @@ src/
       dates.ts         quick/relative date range resolution
     ui/                React/AG Grid layer
       SearchTable.tsx  main component (largest file)
-      FilterBar, filter-kinds, SavedViews, ActionIsland, Popover, selection-column, ag-setup, layout.ts, search-table.css
+      FilterBar, filter-kinds, SavedViews, ActionIsland, Popover, selection-column, ag-setup, layout.ts
+      styles.ts        shared styled-components (Button, LinkButton, Pill, Controls, Check, Anchor); also used by slots
   divisions/           pages: one folder per division with config.ts
     pages.ts           definePage(...) for each division
     registry.ts        `pages` array used by the shell/nav
@@ -37,6 +38,7 @@ src/
     slots/             custom cells, filter editors, dialogs
   api/search-api.ts    createSearchApi(division) -> { fetchRows, runAction } (POST /api/divisions/:division/...)
   mocks/               MSW: db.ts (data), engine.ts (filter/sort/window), handlers.ts, browser.ts, tests
+  GlobalStyle.ts       design tokens as CSS variables (:root) + page reset; rendered once in App
   App.tsx              hash router (`#/<page-id>`) + nav; renders <SearchTable> per page
 claude-design/         design prompt/spec (Items_search.html, chat.md) – reference only
 ```
@@ -62,4 +64,5 @@ claude-design/         design prompt/spec (Items_search.html, chat.md) – refer
 
 - ESM, strict TS (`tsconfig.app.json` for app, `tsconfig.test.json` for tests), no semicolons, single quotes, 2-space indent.
 - Core logic stays pure/headless and gets tests in `core.test.ts`; keep AG Grid and React out of `core/`.
+- Styling is styled-components, no `.css` files. Components read the tokens as `var(--…)` from `GlobalStyle`; variants are transient props (`$ghost`, `$tone`). Component-specific styled parts live at the top of their file, shared ones in `ui/styles.ts`. Page slots (dialogs, editors) import from `ui/styles.ts` rather than copying styles.
 - Short doc comments explain the *why* (domain rules, extension points); follow that style.

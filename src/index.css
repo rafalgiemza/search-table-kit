@@ -1,8 +1,0 @@
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; }
-body {
-  background: var(--bg, #0a0c0b);
-  color: var(--text, #e6ece8);
-  font: 14px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
-  color-scheme: dark;
-}
