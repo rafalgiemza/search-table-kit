@@ -1,4 +1,4 @@
-# neb-todoist
+# search-table-kit
 
 A config-driven **search table** built on AG Grid (server-side row model), with React 19, TypeScript and Vite. Several "division" pages share one table component; each page is described by a small config assembled from reusable blocks.
 
