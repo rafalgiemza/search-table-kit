@@ -1,4 +1,5 @@
 import { pageOptions } from '../../search-table/blocks.ts'
+import { rejectAction } from '../../shared/actions.ts'
 import {
   descriptionBlock,
   idBlock,
@@ -13,5 +14,11 @@ export const division3PageConfig = pageOptions({
   idKey: 'id',
   blocks: [idBlock, descriptionBlock, statusBlock, priorityBlock],
   selection: { mode: 'multiple' },
-  extensions: { DetailsDialog: RowDetailsDialog },
+  actions: [rejectAction()],
+  extensions: {
+    DetailsDialog: RowDetailsDialog,
+    rowMenuItems: ({ rows, openDetails }) => [
+      { name: 'Show details', action: () => openDetails(rows) },
+    ],
+  },
 })
