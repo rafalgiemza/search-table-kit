@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { activeFilterIds } from '../core/criteria.ts'
 import type { SearchAction } from '../core/search-state.ts'
 import type {
@@ -10,29 +10,13 @@ import type {
   SearchPageConfig,
 } from '../types.ts'
 import { EditorFor, uiFor } from './filter-kinds.tsx'
+import { Popover } from './Popover.tsx'
 
 type Props<TFields extends FieldMap> = {
   config: Pick<SearchPageConfig<never, TFields>, 'fields'>
   criteria: SearchCriteria<TFields>
   dispatch: (action: SearchAction<TFields>) => void
   onClearAll: () => void
-}
-
-/** Closes its content on an outside click. */
-const Popover = ({ onClose, children }: { onClose: () => void; children: ReactNode }) => {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [onClose])
-  return (
-    <div ref={ref} className="popover">
-      {children}
-    </div>
-  )
 }
 
 export function FilterBar<TFields extends FieldMap>({

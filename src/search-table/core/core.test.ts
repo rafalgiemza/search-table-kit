@@ -13,7 +13,14 @@ import {
   setRowSelected,
   toSelection,
 } from './selection.ts'
-import { criteriaFromView, isViewDirty, localStorageViewStorage } from './views.ts'
+import {
+  ALL_VIEW_ID,
+  availableViews,
+  criteriaFromView,
+  isViewDirty,
+  localStorageViewStorage,
+  resolveDefaultView,
+} from './views.ts'
 
 type F = { status: 'multiSelect'; endDate: 'date'; description: 'text' } & FieldMap
 const today = new Date(2026, 9, 9) // 2026-10-09
@@ -165,16 +172,38 @@ test('view: dirty detection ignores key order', () => {
   assert.equal(isViewDirty(view, { ...same, search: 'a' }), true)
 })
 
-test('view storage: one default per page', async () => {
+test('view storage: save replaces in place, default id survives other edits', async () => {
   const mem = new Map<string, string>()
   const storage = localStorageViewStorage<F>({
     getItem: (k) => mem.get(k) ?? null,
     setItem: (k, v) => void mem.set(k, v),
   })
-  await storage.save('p', { ...view, id: 'a', isDefault: true })
-  await storage.save('p', { ...view, id: 'b', isDefault: true })
-  const list = await storage.list('p')
-  assert.deepEqual(list.map((v) => [v.id, v.isDefault]), [['a', false], ['b', true]])
-  await storage.remove('p', 'a')
+  await storage.save('p', { ...view, id: 'a' })
+  await storage.save('p', { ...view, id: 'b' })
+  await storage.save('p', { ...view, id: 'a', name: 'Renamed' })
+  assert.deepEqual((await storage.list('p')).map((v) => [v.id, v.name]), [['a', 'Renamed'], ['b', 'Open']])
+  await storage.setDefaultId('p', 'b')
+  assert.equal(await storage.getDefaultId('p'), 'b')
+  await storage.remove('p', 'b')
+  assert.equal(await storage.getDefaultId('p'), null)
   assert.equal((await storage.list('p')).length, 1)
+})
+
+test('default view: user choice, then shipped default, then "All items"', () => {
+  const shipped = [{ ...view, id: 'open', isDefault: true }]
+  const views = availableViews<F>(shipped, [{ ...view, id: 'mine' }], 1)
+  assert.deepEqual(views.map((v) => v.id), [ALL_VIEW_ID, 'open', 'mine'])
+  assert.equal(resolveDefaultView(views, 'mine').id, 'mine')
+  assert.equal(resolveDefaultView(views, null).id, 'open')
+  assert.equal(resolveDefaultView(availableViews<F>([], [], 1), null).id, ALL_VIEW_ID)
+  assert.equal(resolveDefaultView(views, 'gone').id, 'open')
+})
+
+test('view without saved sort keeps the current sort', () => {
+  const sort = [{ colId: 'id', direction: 'asc' as const }]
+  assert.deepEqual(criteriaFromView(view, ['status', 'endDate'], sort).criteria.sort, sort)
+  assert.deepEqual(
+    criteriaFromView({ ...view, sort: [] }, ['status'], sort).criteria.sort,
+    [],
+  )
 })
