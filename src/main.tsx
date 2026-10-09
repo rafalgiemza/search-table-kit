@@ -4,7 +4,8 @@ import './index.css'
 import App from './App.tsx'
 
 const enableMocks = async () => {
-  if (!import.meta.env.DEV) return
+  // Opt-in via .env (PoC: there is no real backend yet).
+  if (import.meta.env.VITE_ENABLE_MOCKS !== 'true') return
   const { worker } = await import('./mocks/browser.ts')
   await worker.start()
 }
