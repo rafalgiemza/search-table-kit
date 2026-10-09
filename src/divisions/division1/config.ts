@@ -13,6 +13,31 @@ export const division1PageConfig = pageOptions({
   idKey: 'id',
   blocks: [idBlock, descriptionBlock, statusBlock, machineLineBlock],
   actions: [sendAction(), rejectAction()],
+  defaultViews: [
+    {
+      id: 'ready',
+      name: 'Ready to send',
+      isDefault: false,
+      schemaVersion: 1,
+      criteria: {
+        search: '',
+        filters: { status: { condition: 'in', values: ['draft', 'pending'] } },
+      },
+    },
+    {
+      id: 'line-a',
+      name: 'Line A, sent',
+      isDefault: false,
+      schemaVersion: 1,
+      criteria: {
+        search: '',
+        filters: {
+          machineLine: { condition: 'in', values: ['A'] },
+          status: { condition: 'in', values: ['sent'] },
+        },
+      },
+    },
+  ],
   selection: {
     mode: 'multiple',
     isSelectable: (row) => row.status === 'draft' || row.status === 'pending',

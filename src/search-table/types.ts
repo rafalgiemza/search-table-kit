@@ -236,6 +236,9 @@ export type ViewStorage<TFields extends FieldMap> = {
   list: (pageId: string) => Promise<SavedView<TFields>[]>
   save: (pageId: string, view: SavedView<TFields>) => Promise<void>
   remove: (pageId: string, viewId: string) => Promise<void>
+  /** Which view opens first; can point at a shipped view. Null = the page's own default. */
+  getDefaultId: (pageId: string) => Promise<string | null>
+  setDefaultId: (pageId: string, viewId: string | null) => Promise<void>
 }
 
 /* -------------------------------------------------------------------------- */

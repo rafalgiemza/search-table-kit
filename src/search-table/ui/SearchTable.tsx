@@ -11,6 +11,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toQuery, withPredicate } from '../core/criteria.ts'
 import { useSearchState } from '../core/search-state.ts'
 import {
+  availableViews,
+  criteriaFromView,
+  isViewDirty,
+  localStorageViewStorage,
+  resolveDefaultView,
+} from '../core/views.ts'
+import {
   emptySelection,
   isSelected,
   selectAllMatching,
@@ -24,12 +31,16 @@ import {
 import type {
   AnyBulkAction,
   FieldMap,
+  SavedView,
   SearchCriteria,
   SearchTableProps,
+  ViewStorage,
 } from '../types.ts'
 import { ActionIsland } from './ActionIsland.tsx'
 import { gridTheme } from './ag-setup.ts'
 import { FilterBar } from './FilterBar.tsx'
+import { applyLayout, captureLayout } from './layout.ts'
+import { SavedViews } from './SavedViews.tsx'
 import {
   NoRows,
   SELECT_COL_ID,
@@ -60,12 +71,56 @@ function useMatchingCount<TRow, TFields extends FieldMap>(
 
 type Notice = { text: string; action?: { label: string; run: () => void } }
 
-export function SearchTable<TRow, TFields extends FieldMap>({
+type Initial<TFields extends FieldMap> = {
+  userViews: SavedView<TFields>[]
+  defaultId: string | null
+  activeId: string
+  criteria: SearchCriteria<TFields>
+  layout?: SavedView<TFields>['layout']
+}
+
+/** Loads saved views first, so the page opens straight on its default view. */
+export function SearchTable<TRow, TFields extends FieldMap>(
+  props: SearchTableProps<TRow, TFields>,
+) {
+  const { config } = props
+  const storage = useMemo<ViewStorage<TFields>>(
+    () => props.viewStorage ?? localStorageViewStorage<TFields>(),
+    [props.viewStorage],
+  )
+  const [initial, setInitial] = useState<Initial<TFields>>()
+
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all([storage.list(config.id), storage.getDefaultId(config.id)])
+      .catch(() => [[], null] as [SavedView<TFields>[], string | null])
+      .then(([userViews, defaultId]) => {
+        if (cancelled) return
+        const views = availableViews(config.defaultViews ?? [], userViews, config.viewsSchemaVersion ?? 1)
+        const view = resolveDefaultView(views, defaultId)
+        const { criteria } = criteriaFromView(view, Object.keys(config.fields))
+        setInitial({ userViews, defaultId, activeId: view.id, criteria, layout: view.layout })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [storage, config])
+
+  return initial ? <SearchTableInner {...props} viewStorage={storage} initial={initial} /> : null
+}
+
+function SearchTableInner<TRow, TFields extends FieldMap>({
   config,
   fetchRows,
   runAction,
-}: SearchTableProps<TRow, TFields>) {
-  const { criteria, dispatch } = useSearchState<TFields>()
+  fetchViewCount,
+  viewStorage,
+  initial,
+}: SearchTableProps<TRow, TFields> & {
+  viewStorage: ViewStorage<TFields>
+  initial: Initial<TFields>
+}) {
+  const { criteria, dispatch } = useSearchState<TFields>(initial.criteria)
   const [selection, setSelection] = useState<SelectionState<TFields>>(emptySelection)
   const [api, setApi] = useState<GridApi<TRow>>()
   const [total, setTotal] = useState(0)
@@ -74,6 +129,23 @@ export function SearchTable<TRow, TFields extends FieldMap>({
   const [busy, setBusy] = useState(false)
   const [dialogAction, setDialogAction] = useState<AnyBulkAction<TRow, TFields> | null>(null)
   const [details, setDetails] = useState<readonly TRow[] | null>(null)
+
+  /* --------------------------- saved views --------------------------------- */
+
+  const schemaVersion = config.viewsSchemaVersion ?? 1
+  const knownFields = useMemo(() => Object.keys(config.fields), [config.fields])
+  const [userViews, setUserViews] = useState(initial.userViews)
+  const [userDefaultId, setUserDefaultId] = useState(initial.defaultId)
+  const [activeId, setActiveId] = useState(initial.activeId)
+  const [counts, setCounts] = useState<Record<string, number | undefined>>({})
+  const views = useMemo(
+    () => availableViews(config.defaultViews ?? [], userViews, schemaVersion),
+    [config.defaultViews, userViews, schemaVersion],
+  )
+  const defaultId = resolveDefaultView(views, userDefaultId).id
+  const activeView = views.find((v) => v.id === activeId) ?? views[0]!
+  const dirty = isViewDirty(activeView, criteria)
+  const ownIds = useMemo(() => new Set(userViews.map((v) => v.id)), [userViews])
 
   const actions = config.actions ?? []
   const policy = config.selection
@@ -229,6 +301,78 @@ export function SearchTable<TRow, TFields extends FieldMap>({
     return () => clearTimeout(t)
   }, [notice])
 
+  const loadView = (view: SavedView<TFields>, notice?: Notice['text']) => {
+    const { criteria: next, dropped } = criteriaFromView(view, knownFields, criteria.sort)
+    dispatch({ type: 'load', criteria: next, label: view.name })
+    setActiveId(view.id)
+    setSelection(emptySelection())
+    if (view.layout && api) applyLayout(api, view.layout)
+    if (dropped.length > 0) {
+      say(`Dropped filters that no longer exist: ${dropped.join(', ')}`)
+    } else if (notice) {
+      say(notice, { label: 'Undo', run: () => dispatch({ type: 'undo' }) })
+    }
+  }
+
+  const snapshot = (id: string, name: string, withLayout: boolean): SavedView<TFields> => ({
+    id,
+    name,
+    isDefault: false,
+    schemaVersion,
+    criteria: { search: criteria.search, filters: criteria.filters },
+    sort: withLayout ? criteria.sort : undefined,
+    layout: withLayout && api ? captureLayout(api) : undefined,
+  })
+
+  const saveNewView = async (name: string, withLayout: boolean) => {
+    const view = snapshot(crypto.randomUUID(), name, withLayout)
+    await viewStorage.save(config.id, view)
+    setUserViews((v) => [...v, view])
+    setActiveId(view.id)
+    say(`Saved view “${name}”`)
+  }
+
+  const updateView = async (withLayout: boolean) => {
+    const view = snapshot(activeView.id, activeView.name, withLayout)
+    await viewStorage.save(config.id, view)
+    setUserViews((list) => list.map((v) => (v.id === view.id ? view : v)))
+    say(`Updated “${view.name}”`)
+  }
+
+  const deleteView = async (id: string) => {
+    await viewStorage.remove(config.id, id)
+    setUserViews((list) => list.filter((v) => v.id !== id))
+    if (userDefaultId === id) setUserDefaultId(null)
+    if (activeId === id) loadView(resolveDefaultView(views.filter((v) => v.id !== id), null))
+  }
+
+  const makeDefault = async (id: string) => {
+    await viewStorage.setDefaultId(config.id, id)
+    setUserDefaultId(id)
+    say(`“${views.find((v) => v.id === id)?.name}” opens first from now on`)
+  }
+
+  /** Counts are loaded when the dropdown opens, one zero-row query per view. */
+  const loadCounts = () => {
+    for (const view of views) {
+      const count =
+        fetchViewCount?.(view) ??
+        fetchRows(
+          toQuery(criteriaFromView(view, knownFields).criteria, { startRow: 0, endRow: 0 }),
+          new AbortController().signal,
+        ).then((r) => r.total)
+      count.then((n) => setCounts((c) => ({ ...c, [view.id]: n }))).catch(() => undefined)
+    }
+  }
+
+  // The default view may carry a saved column layout; apply it once the grid is up.
+  const layoutApplied = useRef(false)
+  useEffect(() => {
+    if (!api || layoutApplied.current || !initial.layout) return
+    layoutApplied.current = true
+    applyLayout(api, initial.layout)
+  }, [api, initial.layout])
+
   const run = async (action: AnyBulkAction<TRow, TFields>, payload?: unknown) => {
     setBusy(true)
     setDialogAction(null)
@@ -345,6 +489,21 @@ export function SearchTable<TRow, TFields extends FieldMap>({
     <section className="search-page">
       <header className="search-page__head">
         <h1>{config.title}</h1>
+        <SavedViews
+          views={views}
+          activeId={activeView.id}
+          defaultId={defaultId}
+          dirty={dirty}
+          ownIds={ownIds}
+          counts={counts}
+          onOpen={loadCounts}
+          onSelect={(id) => loadView(views.find((v) => v.id === id)!)}
+          onSaveNew={(name, withLayout) => void saveNewView(name, withLayout)}
+          onUpdate={(withLayout) => void updateView(withLayout)}
+          onDelete={(id) => void deleteView(id)}
+          onSetDefault={(id) => void makeDefault(id)}
+          onReset={() => loadView(activeView, `Reset to “${activeView.name}”`)}
+        />
       </header>
 
       <FilterBar
