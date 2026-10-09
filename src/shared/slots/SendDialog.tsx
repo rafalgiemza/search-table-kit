@@ -9,6 +9,7 @@ type Row = { id: string; description: string }
 export function SendDialog<TRow extends Row, TFields extends FieldMap>({
   rows,
   skippedRows,
+  count,
   selection,
   onRemoveRow,
   onConfirm,
@@ -17,12 +18,17 @@ export function SendDialog<TRow extends Row, TFields extends FieldMap>({
   const [mode, setMode] = useState<SendPayload['mode']>('draft')
   const skippedIds = new Set(skippedRows.map((r) => r.id))
   const sendable = rows.filter((r) => !skippedIds.has(r.id))
+  // Rows that left the loaded window still count as selected, but cannot be listed.
+  const notShown = Math.max(0, count - rows.length)
 
   return (
     <div role="dialog" aria-label="Send items">
       <h2>Send items</h2>
       {selection.mode === 'criteria' ? (
-        <p>All matching items will be sent; the server skips ineligible ones.</p>
+        <p>
+          All {count} matching items will be sent; the server skips ineligible ones (already sent or
+          rejected) and reports how many.
+        </p>
       ) : (
         <>
           <ul>
@@ -35,6 +41,12 @@ export function SendDialog<TRow extends Row, TFields extends FieldMap>({
               </li>
             ))}
           </ul>
+          {notShown > 0 && (
+            <p>
+              + {notShown} more selected, not loaded here; the server skips ineligible ones (already
+              sent or rejected).
+            </p>
+          )}
           {skippedRows.length > 0 && (
             <p>
               Skipped (already sent or rejected): {skippedRows.map((r) => r.id).join(', ')}
