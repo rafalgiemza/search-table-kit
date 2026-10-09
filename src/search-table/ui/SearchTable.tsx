@@ -585,7 +585,8 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
         onClearAll={clearAll}
       />
 
-      {selectMode === 'multiple' && selection.kind === 'ids' && pageAll && (matching ?? total) > pageCount && (
+      {/* Offered only once the real size is known; the view's total ignores the page's selection predicate. */}
+      {selectMode === 'multiple' && selection.kind === 'ids' && pageAll && matching !== undefined && matching > pageCount && (
         <div className="banner">
           All {pageCount} items on this page are selected.
           <button
@@ -593,7 +594,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
             className="link"
             onClick={() => setSelection(selectAllMatching(criteria, policy))}
           >
-            Select all {matching ?? total} matching
+            Select all {matching} matching
           </button>
         </div>
       )}
