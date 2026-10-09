@@ -146,6 +146,7 @@
 }
 .island__handle:active { cursor: grabbing; }
 .island__body { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+.island__status { display: flex; align-items: center; gap: 10px; }
 .island__warning { color: var(--warning); font-size: 12px; }
 
 .modal {

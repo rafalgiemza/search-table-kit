@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import type { FieldMap, SavedView } from '../types.ts'
 import { clearFilters, emptyCriteria, setFilter, toQuery, withPredicate } from './criteria.ts'
 import { resolveQuickRange } from './dates.ts'
+import { clampPosition, parsePosition } from './island.ts'
 import { searchReducer } from './search-state.ts'
 import {
   emptySelection,
@@ -11,6 +12,7 @@ import {
   selectedCount,
   setPageSelected,
   setRowSelected,
+  skipEstimate,
   toSelection,
 } from './selection.ts'
 import {
@@ -206,4 +208,30 @@ test('view without saved sort keeps the current sort', () => {
     criteriaFromView({ ...view, sort: [] }, ['status'], sort).criteria.sort,
     [],
   )
+})
+
+test('parsePosition accepts only finite x/y numbers', () => {
+  assert.deepEqual(parsePosition({ x: 10, y: 20 }), { x: 10, y: 20 })
+  for (const bad of [null, 5, 'x', [], {}, { x: '1', y: 2 }, { x: NaN, y: 0 }, { x: 0, y: Infinity }]) {
+    assert.equal(parsePosition(bad), null)
+  }
+})
+
+test('clampPosition keeps the element inside its container', () => {
+  const container = { width: 500, height: 300 }
+  const element = { width: 100, height: 40 }
+  assert.deepEqual(clampPosition({ x: 50, y: 60 }, container, element), { x: 50, y: 60 })
+  assert.deepEqual(clampPosition({ x: -5, y: 999 }, container, element), { x: 0, y: 260 })
+  assert.deepEqual(clampPosition({ x: 999, y: -1 }, container, element), { x: 400, y: 0 })
+  // container smaller than the element: never negative
+  assert.deepEqual(clampPosition({ x: 30, y: 30 }, { width: 50, height: 10 }, element), { x: 0, y: 0 })
+})
+
+test('skipEstimate is exact only when every selected row is loaded', () => {
+  const even = (n: number) => n % 2 === 0
+  assert.deepEqual(skipEstimate([1, 2, 3], 3, even), { skipped: 2, complete: true })
+  // scrolled-out rows: only a lower bound
+  assert.deepEqual(skipEstimate([1, 2], 5, even), { skipped: 1, complete: false })
+  // "all matching" selections have no loaded rows at all
+  assert.deepEqual(skipEstimate([], 120, even), { skipped: 0, complete: false })
 })

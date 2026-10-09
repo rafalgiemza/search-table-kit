@@ -77,3 +77,17 @@ export const toSelection = <TFields extends FieldMap>(
   state.kind === 'ids'
     ? { mode: 'ids', ids: [...state.ids] }
     : { mode: 'criteria', criteria: state.criteria, excludedIds: [...state.excluded] }
+
+/**
+ * What the UI can say about rows an action will skip. `rows` is only the loaded
+ * part of a selection ("all matching" has none, scrolled-out rows may be gone),
+ * so `skipped` is a lower bound unless `complete`; the backend has the final say.
+ */
+export const skipEstimate = <TRow>(
+  rows: readonly TRow[],
+  count: number,
+  isApplicable: (row: TRow) => boolean,
+): { skipped: number; complete: boolean } => ({
+  skipped: rows.filter((r) => !isApplicable(r)).length,
+  complete: rows.length >= count,
+})
