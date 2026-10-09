@@ -35,7 +35,12 @@ export const statusBlock = block<ItemStatus>()({
 export const machineLineBlock = block<string>()({
   key: 'machineLine',
   column: { headerName: 'Line', width: 120 },
-  filter: { kind: 'multiSelect', label: 'Line', hint: 'pick one or more' },
+  filter: {
+    kind: 'multiSelect',
+    label: 'Line',
+    hint: 'pick one or more',
+    options: ['A', 'B', 'C', 'D'].map((l) => ({ value: l, label: `Line ${l}` })),
+  },
 })
 
 export const notesBlock = block<string>()({
