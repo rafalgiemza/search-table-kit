@@ -6,6 +6,7 @@ import {
   priorityBlock,
   statusBlock,
 } from '../../shared/blocks/index.ts'
+import { SubmitBar } from '../../shared/slots/SubmitBar.tsx'
 import { RowDetailsDialog } from '../../shared/slots/RowDetailsDialog.tsx'
 
 export const division3PageConfig = pageOptions({
@@ -17,6 +18,7 @@ export const division3PageConfig = pageOptions({
   actions: [rejectAction()],
   extensions: {
     DetailsDialog: RowDetailsDialog,
+    SelectionBar: SubmitBar,
     rowMenuItems: ({ rows, openDetails }) => [
       { name: 'Show details', action: () => openDetails(rows) },
     ],
