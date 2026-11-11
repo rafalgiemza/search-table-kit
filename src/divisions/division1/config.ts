@@ -40,7 +40,6 @@ export const division1PageConfig = pageOptions({
   ],
   selection: {
     mode: 'multiple',
-    isSelectable: (row) => row.status === 'draft' || row.status === 'pending',
-    criteriaPredicate: { status: { condition: 'in', values: ['draft', 'pending'] } },
+    selectableWhen: { status: { condition: 'in', values: ['draft', 'pending'] } },
   },
 })

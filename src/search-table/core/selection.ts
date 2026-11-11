@@ -1,5 +1,6 @@
 import type { FieldMap, SearchCriteria, Selection, SelectionPolicy } from '../types.ts'
 import { withPredicate } from './criteria.ts'
+import { matchesFilters } from './match.ts'
 
 /**
  * `ids`: explicit rows. `all`: "everything matching `criteria`" minus
@@ -48,13 +49,22 @@ export const setPageSelected = <TFields extends FieldMap>(
 ): SelectionState<TFields> =>
   pageIds.reduce((acc, id) => setRowSelected(acc, id, selected), state)
 
+/** Grid-side check of the page's selection rule (`selectableWhen` + `isSelectable`). */
+export const isRowSelectable = <TRow, TFields extends FieldMap>(
+  row: TRow,
+  policy?: SelectionPolicy<TRow, TFields>,
+): boolean =>
+  (!policy?.selectableWhen ||
+    matchesFilters(row as Record<string, unknown>, policy.selectableWhen)) &&
+  (policy?.isSelectable?.(row) ?? true)
+
 /** "Select all N matching" - snapshot of the current criteria, predicate applied. */
 export const selectAllMatching = <TFields extends FieldMap, TRow>(
   criteria: SearchCriteria<TFields>,
   policy?: SelectionPolicy<TRow, TFields>,
 ): SelectionState<TFields> => ({
   kind: 'all',
-  criteria: withPredicate(criteria, policy?.criteriaPredicate),
+  criteria: withPredicate(criteria, policy?.selectableWhen),
   excluded: new Set(),
 })
 

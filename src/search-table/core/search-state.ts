@@ -1,4 +1,3 @@
-import { useCallback, useReducer } from 'react'
 import type {
   FieldId,
   FieldMap,
@@ -8,7 +7,6 @@ import type {
 } from '../types.ts'
 import {
   clearFilters,
-  emptyCriteria,
   removeFilter,
   setFilter,
 } from './criteria.ts'
@@ -75,22 +73,5 @@ export const searchReducer = <TFields extends FieldMap>(
       return { criteria: { ...state.criteria, sort: action.sort } }
     case 'undo':
       return state.undo ? { criteria: state.undo.criteria } : state
-  }
-}
-
-/** All search state of one page. No data fetching, no AG Grid. */
-export const useSearchState = <TFields extends FieldMap>(
-  initial: SearchCriteria<TFields> = emptyCriteria(),
-) => {
-  const [state, dispatch] = useReducer(
-    searchReducer<TFields>,
-    { criteria: initial },
-  )
-
-  return {
-    criteria: state.criteria,
-    undo: state.undo,
-    dispatch: dispatch as (action: SearchAction<TFields>) => void,
-    setSearch: useCallback((text: string) => dispatch({ type: 'search', text }), []),
   }
 }

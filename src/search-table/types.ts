@@ -281,14 +281,18 @@ export type SearchPageExtensions<TRow, TFields extends FieldMap> = {
 /** How rows may be selected on a page. */
 export type SelectionPolicy<TRow, TFields extends FieldMap> = {
   mode: 'none' | 'single' | 'multiple'
-  /** Per-row rule for the grid, e.g. only rows with status "done". */
-  isSelectable?: (row: TRow) => boolean
   /**
-   * The same rule as a filter, AND-ed into the criteria of a "select all
-   * matching" selection. The backend never sees rows there, so a function
-   * alone cannot enforce the rule.
+   * Which rows may be selected, e.g. only status "draft" or "pending". One
+   * rule, two uses: it disables rows in the grid, and it is AND-ed into the
+   * criteria of a "select all matching" selection (the backend never sees
+   * rows there, so it has to be a filter, not a function).
    */
-  criteriaPredicate?: FilterState<TFields>
+  selectableWhen?: FilterState<TFields>
+  /**
+   * Escape hatch for rules a filter cannot express. Only the grid sees it,
+   * so it is NOT enforced in "select all matching"; prefer `selectableWhen`.
+   */
+  isSelectable?: (row: TRow) => boolean
 }
 
 /**

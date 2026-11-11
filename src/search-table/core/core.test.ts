@@ -135,7 +135,7 @@ test('selection: page, then all matching, with exclusions', () => {
 test('selection: "all matching" carries the page predicate', () => {
   const sel = selectAllMatching(emptyCriteria<F>(), {
     mode: 'multiple',
-    criteriaPredicate: { status: { condition: 'in', values: ['sent'] } },
+    selectableWhen: { status: { condition: 'in', values: ['sent'] } },
   })
   assert.deepEqual(toSelection(sel), {
     mode: 'criteria',

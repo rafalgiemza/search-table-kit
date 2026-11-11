@@ -10,7 +10,7 @@ import { AgGridReact } from 'ag-grid-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { toQuery, withPredicate } from '../core/criteria.ts'
-import { useSearchState } from '../core/search-state.ts'
+import { useSearchState } from './useSearchState.ts'
 import {
   availableViews,
   criteriaFromView,
@@ -20,6 +20,7 @@ import {
 } from '../core/views.ts'
 import {
   emptySelection,
+  isRowSelectable,
   isSelected,
   selectAllMatching,
   selectedCount,
@@ -333,7 +334,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
   }, [api, byIndex, total])
 
   const isSelectable = useCallback(
-    (row: TRow) => selectMode !== 'none' && (policy?.isSelectable?.(row) ?? true),
+    (row: TRow) => selectMode !== 'none' && isRowSelectable(row, policy),
     [selectMode, policy],
   )
 
@@ -381,7 +382,7 @@ function SearchTableInner<TRow, TFields extends FieldMap>({
   // "All matching" must count what the server will actually act on, so the
   // page's predicate is included. Its size comes from a zero-row query.
   const matchingCriteria = useMemo(
-    () => withPredicate(criteria, policy?.criteriaPredicate),
+    () => withPredicate(criteria, policy?.selectableWhen),
     [criteria, policy],
   )
   const { total: matching, failed: matchingFailed } = useMatchingCount(

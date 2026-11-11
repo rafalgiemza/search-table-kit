@@ -63,7 +63,7 @@ export type PageOptions<TBlocks extends readonly AnyBlock[]> = Omit<
 
 /**
  * Identity helper for a page's options kept in their own file: it keeps
- * inference (row type in `isSelectable`, filter ids in `criteriaPredicate`)
+ * inference (row type in `isSelectable`, filter ids in `selectableWhen`)
  * that a plain `const` object would lose.
  */
 export const pageOptions = <const TBlocks extends readonly AnyBlock[]>(
