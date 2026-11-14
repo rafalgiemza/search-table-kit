@@ -9,7 +9,7 @@ React 19 + TypeScript + Vite app: a config-driven **search table** (AG Grid Ente
 - `pnpm lint` – oxlint (`.oxlintrc.json`)
 - `pnpm test` – `node --test 'src/**/*.test.ts'` (Node's built-in runner, run directly on `.ts`; no Vitest/Jest)
 
-Tests exist for `src/search-table/core/` and `src/mocks/`. Relative imports must include the `.ts`/`.tsx` extension (Node + `allowImportingTsExtensions` style).
+Tests exist for `src/search-table/core/` (`core.test.ts`, `table-logic.test.ts`) and `src/mocks/`. Relative imports must include the `.ts`/`.tsx` extension (Node + `allowImportingTsExtensions` style).
 
 ## Architecture
 
@@ -19,14 +19,19 @@ src/
     types.ts           all shared types (read first)
     blocks.ts          block(), pageOptions(), definePage()
     core/              headless logic: pure functions + reducer, no AG Grid, unit-tested
-      criteria.ts      criteria/filter manipulation, toQuery, withPredicate
-      search-state.ts  searchReducer + useSearchState (search, filters, sort, undo)
-      selection.ts     ids vs "select all matching" (criteria + excludedIds)
-      views.ts         saved views, dirty check, default resolution, localStorage storage
+      criteria.ts      criteria/filter manipulation, toQuery, withPredicate, queryKey/filtersKey
+      search-state.ts  searchReducer (search, filters, sort, undo); the hook is ui/useSearchState.ts
+      selection.ts     ids vs "select all matching", isRowSelectable, pageSelectionState, selectionSize
+      match.ts         filter matching on a row; shared by the grid rule and the mock backend
+      row-menu.ts      planRowMenu: what the right-click menu offers (AG Grid adapter: ui/context-menu.ts)
+      sort.ts          grid column state -> sort model
+      views.ts         saved views, dirty check, default resolution, snapshotView, localStorage storage
       dates.ts         quick/relative date range resolution
     ui/                React/AG Grid layer
-      SearchTable.tsx  main component (largest file)
-      FilterBar, filter-kinds, SavedViews, ActionIsland, Popover, selection-column, ag-setup, layout.ts
+      SearchTable.tsx  wiring only: composes the hooks below and renders
+      hooks/           useServerData (datasource, sort sync), useTableSelection, useSavedViews,
+                       useBulkActions, useNotice, useMatchingCount, useStableGridContext
+      FilterBar, filter-kinds, SavedViews, ActionIsland, Popover, selection-column, columns.ts, context-menu.ts, ag-setup, layout.ts
       styles.ts        shared styled-components (Button, LinkButton, Pill, Controls, Check, Anchor); also used by slots
   divisions/           pages: one folder per division with config.ts
     pages.ts           definePage(...) for each division
@@ -49,7 +54,7 @@ claude-design/         design prompt/spec (Items_search.html, chat.md) – refer
 - **`FieldMap` typing.** Field id -> filter kind (`text`, `multiSelect`, `idList`, `date`, `boolean`), threaded as `TFields` through all types so filter ids are compile-checked. New filter kinds: extend `FilterKinds` via declaration merging and register a renderer in `ui/filter-kinds.tsx`.
 - **Dumb table, smart parent.** `SearchTable` never fetches; it receives `config`, `fetchRows`, `runAction` (and optional `fetchViewCount`, `viewStorage`). `App.tsx` builds these with `createSearchApi`.
 - **Search contract.** `SearchQuery` = `{ search, filters, sort, startRow, endRow }` POSTed to the backend; relative date filters are resolved to `between` before sending. Response `{ rows, total }`.
-- **Selection** is either explicit `ids` or `criteria` + `excludedIds`; `SelectionPolicy.criteriaPredicate` mirrors `isSelectable` as a filter because the backend never sees rows in criteria mode.
+- **Selection** is either explicit `ids` or `criteria` + `excludedIds`; `SelectionPolicy.selectableWhen` is the single rule: it disables rows in the grid (`isRowSelectable`) and is AND-ed into criteria mode, because the backend never sees rows there. `isSelectable` is only an escape hatch for rules a filter cannot express (grid-only).
 - **Bulk actions** (`defineAction`) have `confirm` of `none` / `inline` / `dialog`; `isApplicable` rows are skipped and reported. The mock backend in `handlers.ts` owns the real applicability rules.
 - **Saved views** are keyed by page id, versioned by `viewsSchemaVersion` (unknown filters dropped), stored in localStorage behind the `ViewStorage` interface (backend-swappable).
 - **Per-page deviations** go only through `SearchPageExtensions` (`rowMenuItems`, `SelectionBar`, `DetailsDialog`); otherwise change the shared component rather than copy it.
@@ -58,11 +63,11 @@ claude-design/         design prompt/spec (Items_search.html, chat.md) – refer
 
 1. Create `src/divisions/<name>/config.ts` exporting `pageOptions({...})` from shared blocks (add new blocks in `shared/blocks/index.ts`).
 2. Wrap with `definePage` in `divisions/pages.ts` and add it to `registry.ts`.
-3. Add it to the hardcoded `pages` list in `src/mocks/browser.ts` (row keys are derived from the page's columns) and make sure `MockItem` in `mocks/db.ts` has every field its blocks use.
+3. `mocks/browser.ts` reads `registry.ts` (row keys are derived from the page's columns); make sure `MockItem` in `mocks/db.ts` has every field its blocks use.
 
 ## Conventions
 
 - ESM, strict TS (`tsconfig.app.json` for app, `tsconfig.test.json` for tests), no semicolons, single quotes, 2-space indent.
-- Core logic stays pure/headless and gets tests in `core.test.ts`; keep AG Grid and React out of `core/`.
+- Core logic stays pure/headless and gets tests in `core/*.test.ts`; keep AG Grid and React out of `core/` (only `types.ts` imports AG Grid *types*). Logic that used to live in `SearchTable.tsx` goes into `core/` as a pure function and is wired by a hook in `ui/hooks/`.
 - Styling is styled-components, no `.css` files. Components read the tokens as `var(--…)` from `GlobalStyle`; variants are transient props (`$ghost`, `$tone`). Component-specific styled parts live at the top of their file, shared ones in `ui/styles.ts`. Page slots (dialogs, editors) import from `ui/styles.ts` rather than copying styles.
 - Short doc comments explain the *why* (domain rules, extension points); follow that style.

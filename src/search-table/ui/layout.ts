@@ -1,6 +1,6 @@
 import type { GridApi } from 'ag-grid-community'
 import type { ViewLayout } from '../types.ts'
-import { SELECT_COL_ID } from './selection-column.tsx'
+import { SELECT_COL_ID } from './grid-constants.ts'
 
 /** Column order and widths as they are now, without the selection column. */
 export const captureLayout = (api: GridApi): ViewLayout => {

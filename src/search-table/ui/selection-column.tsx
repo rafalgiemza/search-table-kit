@@ -28,7 +28,6 @@ export type GridContext = {
   clearAll: () => void
 }
 
-export const SELECT_COL_ID = '__select'
 
 export const SelectCell = ({ data, context }: CustomCellRendererProps) => {
   const ctx = context as GridContext

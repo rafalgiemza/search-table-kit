@@ -95,3 +95,13 @@ export const toQuery = <TFields extends FieldMap>(
   filters: resolveRelativeDates(criteria.filters, today),
   ...window,
 })
+
+/** Identity of a result set: equal keys mean the same rows in the same order. */
+export const queryKey = (
+  c: { search: unknown; filters: unknown },
+  sort: unknown,
+) => JSON.stringify([c.search, c.filters, sort])
+
+/** Search + filters only; a change reloads from the first page, sort does not. */
+export const filtersKey = (c: { search: unknown; filters: unknown }) =>
+  JSON.stringify({ s: c.search, f: c.filters })

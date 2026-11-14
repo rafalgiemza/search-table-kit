@@ -20,10 +20,14 @@
     "styled-components": "^6.5.3"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^21.0.4",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "happy-dom": "^21.0.4",
     "msw": "^3.0.2",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",

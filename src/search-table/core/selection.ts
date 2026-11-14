@@ -95,3 +95,30 @@ export const skipEstimate = <TRow>(
   skipped: rows.filter((r) => !isApplicable(r)).length,
   complete: rows.length >= count,
 })
+
+export type PageState = 'none' | 'some' | 'all'
+
+/** Header checkbox state, given the ids on the page that may be selected. */
+export const pageSelectionState = <TFields extends FieldMap>(
+  state: SelectionState<TFields>,
+  selectableIds: readonly string[],
+): PageState => {
+  const picked = selectableIds.filter((id) => isSelected(state, id)).length
+  return picked === 0 ? 'none' : picked === selectableIds.length ? 'all' : 'some'
+}
+
+/**
+ * Size of the selection. `null`: "all matching" whose size is not known yet
+ * (or could not be fetched). Never guessed from the current view's total,
+ * because the snapshot's criteria may differ from it.
+ */
+export const selectionSize = <TFields extends FieldMap>(
+  state: SelectionState<TFields>,
+  total: number,
+  matching: number | undefined,
+): number | null =>
+  state.kind === 'ids'
+    ? selectedCount(state, total)
+    : matching === undefined
+      ? null
+      : selectedCount(state, matching)

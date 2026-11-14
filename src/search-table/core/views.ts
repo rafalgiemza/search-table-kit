@@ -2,6 +2,7 @@ import type {
   FieldMap,
   SavedView,
   SearchCriteria,
+  ViewLayout,
   ViewStorage,
 } from '../types.ts'
 import { criteriaEqual } from './criteria.ts'
@@ -111,3 +112,17 @@ export const localStorageViewStorage = <TFields extends FieldMap>(
     setDefaultId: async (pageId, viewId) => storage.setItem(defaultKey(pageId), viewId ?? ''),
   }
 }
+
+/** The view the user is about to save: current search and filters, optionally sort and layout. */
+export const snapshotView = <TFields extends FieldMap>(
+  criteria: SearchCriteria<TFields>,
+  meta: { id: string; name: string; schemaVersion: number },
+  withLayout: boolean,
+  layout?: ViewLayout,
+): SavedView<TFields> => ({
+  ...meta,
+  isDefault: false,
+  criteria: { search: criteria.search, filters: criteria.filters },
+  sort: withLayout ? criteria.sort : undefined,
+  layout: withLayout ? layout : undefined,
+})
