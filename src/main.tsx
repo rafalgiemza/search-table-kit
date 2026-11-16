@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
+import App from './app/App.tsx'
 
 const enableMocks = async () => {
   // Opt-in via .env (PoC: there is no real backend yet).

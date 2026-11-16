@@ -1,4 +1,4 @@
-import type { FilterEditorProps } from '../../search-table/types.ts'
+import type { FilterEditorProps } from '../search-table/types.ts'
 
 const levels = ['low', 'medium', 'high'] as const
 

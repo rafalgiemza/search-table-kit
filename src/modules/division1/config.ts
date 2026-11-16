@@ -1,0 +1,47 @@
+import { definePage, pageOptions } from '#shared/search-table/blocks.ts'
+import { rejectAction, sendAction } from '#shared/actions.ts'
+import {
+  descriptionBlock,
+  idBlock,
+  machineLineBlock,
+  statusBlock,
+} from '#shared/blocks/index.ts'
+
+const options = pageOptions({
+  id: 'division-1',
+  title: 'Division 1',
+  idKey: 'id',
+  blocks: [idBlock, descriptionBlock, statusBlock, machineLineBlock],
+  actions: [sendAction(), rejectAction()],
+  defaultViews: [
+    {
+      id: 'ready',
+      name: 'Ready to send',
+      isDefault: false,
+      schemaVersion: 1,
+      criteria: {
+        search: '',
+        filters: { status: { condition: 'in', values: ['draft', 'pending'] } },
+      },
+    },
+    {
+      id: 'line-a',
+      name: 'Line A, sent',
+      isDefault: false,
+      schemaVersion: 1,
+      criteria: {
+        search: '',
+        filters: {
+          machineLine: { condition: 'in', values: ['A'] },
+          status: { condition: 'in', values: ['sent'] },
+        },
+      },
+    },
+  ],
+  selection: {
+    mode: 'multiple',
+    selectableWhen: { status: { condition: 'in', values: ['draft', 'pending'] } },
+  },
+})
+
+export const division1Page = definePage(options)

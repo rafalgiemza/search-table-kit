@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent } from 'react'
 import styled from 'styled-components'
-import { clampPosition, type Position } from '../../search-table/core/island.ts'
-import { Button } from '../../search-table/ui/styles.ts'
+import { clampPosition, type Position } from '../search-table/core/island.ts'
+import { Button } from '../search-table/ui/styles.ts'
 
 const Island = styled.div`
   position: absolute;

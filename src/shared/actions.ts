@@ -1,4 +1,4 @@
-import type { AnyBulkAction } from '../search-table/types.ts'
+import type { AnyBulkAction } from './search-table/types.ts'
 import type { ItemStatus } from './blocks/index.ts'
 import { SendDialog } from './slots/SendDialog.tsx'
 
