@@ -1,13 +1,13 @@
-import { pageOptions } from '../../search-table/blocks.ts'
-import { rejectAction, sendAction } from '../../shared/actions.ts'
+import { definePage, pageOptions } from '#shared/search-table/blocks.ts'
+import { rejectAction, sendAction } from '#shared/actions.ts'
 import {
   descriptionBlock,
   idBlock,
   machineLineBlock,
   statusBlock,
-} from '../../shared/blocks/index.ts'
+} from '#shared/blocks/index.ts'
 
-export const division1PageConfig = pageOptions({
+const options = pageOptions({
   id: 'division-1',
   title: 'Division 1',
   idKey: 'id',
@@ -43,3 +43,5 @@ export const division1PageConfig = pageOptions({
     selectableWhen: { status: { condition: 'in', values: ['draft', 'pending'] } },
   },
 })
+
+export const division1Page = definePage(options)

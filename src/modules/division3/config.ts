@@ -1,15 +1,15 @@
-import { pageOptions } from '../../search-table/blocks.ts'
-import { rejectAction } from '../../shared/actions.ts'
+import { definePage, pageOptions } from '#shared/search-table/blocks.ts'
+import { rejectAction } from '#shared/actions.ts'
 import {
   descriptionBlock,
   idBlock,
   priorityBlock,
   statusBlock,
-} from '../../shared/blocks/index.ts'
-import { SubmitBar } from '../../shared/slots/SubmitBar.tsx'
-import { RowDetailsDialog } from '../../shared/slots/RowDetailsDialog.tsx'
+} from '#shared/blocks/index.ts'
+import { SubmitBar } from '#shared/slots/SubmitBar.tsx'
+import { RowDetailsDialog } from '#shared/slots/RowDetailsDialog.tsx'
 
-export const division3PageConfig = pageOptions({
+const options = pageOptions({
   id: 'division-3',
   title: 'Division 3',
   idKey: 'id',
@@ -24,3 +24,5 @@ export const division3PageConfig = pageOptions({
     ],
   },
 })
+
+export const division3Page = definePage(options)

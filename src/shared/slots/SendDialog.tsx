@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { ActionDialogProps, FieldMap } from '../../search-table/types.ts'
-import { Button, Controls, LinkButton, Pill } from '../../search-table/ui/styles.ts'
+import type { ActionDialogProps, FieldMap } from '../search-table/types.ts'
+import { Button, Controls, LinkButton, Pill } from '../search-table/ui/styles.ts'
 
 export type SendPayload = { mode: 'draft' | 'publish' }
 

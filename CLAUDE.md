@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-React 19 + TypeScript + Vite app: a config-driven **search table** (AG Grid Enterprise, server-side row model) used by several "division" pages. Data comes from an MSW mock backend in dev. `README.md` is the unmodified Vite template; ignore it.
+React 19 + TypeScript + Vite app: a config-driven **search table** (AG Grid Enterprise, server-side row model) used by several "division" pages. Data comes from an MSW mock backend in dev. 
 
 ## Commands (pnpm)
 
@@ -9,50 +9,44 @@ React 19 + TypeScript + Vite app: a config-driven **search table** (AG Grid Ente
 - `pnpm lint` – oxlint (`.oxlintrc.json`)
 - `pnpm test` – `node --test 'src/**/*.test.ts'` (Node's built-in runner, run directly on `.ts`; no Vitest/Jest)
 
-Tests exist for `src/search-table/core/` (`core.test.ts`, `table-logic.test.ts`) and `src/mocks/`. Relative imports must include the `.ts`/`.tsx` extension (Node + `allowImportingTsExtensions` style).
+Tests exist for `src/shared/search-table/core/` (`core.test.ts`, `table-logic.test.ts`) and `src/mocks/`. Relative imports must include the `.ts`/`.tsx` extension (Node + `allowImportingTsExtensions` style).
 
 ## Architecture
 
+Modular monolith. Dependency direction: `app -> shell -> modules -> shared` (enforced by oxlint, see `.oxlintrc.json`). Code outside `src/shared` imports via subpath aliases `#shared/*`, `#modules/*`, `#shell/*`, `#app/*` (package.json `imports`, so Node's test runner resolves them too; include the `.ts(x)` extension). Code inside a zone uses relative imports.
+
 ```
 src/
-  search-table/        generic, page-agnostic table
-    types.ts           all shared types (read first)
-    blocks.ts          block(), pageOptions(), definePage()
-    core/              headless logic: pure functions + reducer, no AG Grid, unit-tested
-      criteria.ts      criteria/filter manipulation, toQuery, withPredicate, queryKey/filtersKey
-      search-state.ts  searchReducer (search, filters, sort, undo); the hook is ui/useSearchState.ts
-      selection.ts     ids vs "select all matching", isRowSelectable, pageSelectionState, selectionSize
-      match.ts         filter matching on a row; shared by the grid rule and the mock backend
-      row-menu.ts      planRowMenu: what the right-click menu offers (AG Grid adapter: ui/context-menu.ts)
-      sort.ts          grid column state -> sort model
-      views.ts         saved views, dirty check, default resolution, snapshotView, localStorage storage
-      dates.ts         quick/relative date range resolution
-    ui/                React/AG Grid layer
-      SearchTable.tsx  wiring only: composes the hooks below and renders
-      hooks/           useServerData (datasource, sort sync), useTableSelection, useSavedViews,
-                       useBulkActions, useNotice, useMatchingCount, useStableGridContext
-      FilterBar, filter-kinds, SavedViews, ActionIsland, Popover, selection-column, columns.ts, context-menu.ts, ag-setup, layout.ts
-      styles.ts        shared styled-components (Button, LinkButton, Pill, Controls, Check, Anchor); also used by slots
-  divisions/           pages: one folder per division with config.ts
-    pages.ts           definePage(...) for each division
-    registry.ts        `pages` array used by the shell/nav
-    pages.check.ts     compile-time type assertions (@ts-expect-error) – checked by `tsc -b`
+  app/                 composition root: App, AppProviders (QueryClient, HashRouter), AppRoutes, modules.ts (registry), pages.check.ts
+  shell/               AppLayout (nav), ModuleErrorBoundary, PageSkeleton, GlobalStyle (CSS-variable tokens)
+  modules/<name>/      one per division: config.ts (pageOptions + definePage), routes.tsx (lazy chunk), index.ts (AppModule manifest + page export = the ONLY public entry)
   shared/
-    blocks/index.ts    reusable blocks (id, description, status, machineLine, notes, priority)
-    actions.ts         sendAction / rejectAction (bulk actions)
-    slots/             custom cells, filter editors, dialogs
-  api/search-api.ts    createSearchApi(division) -> { fetchRows, runAction } (POST /api/divisions/:division/...)
-  mocks/               MSW: db.ts (data), engine.ts (filter/sort/window), handlers.ts, browser.ts, tests
-  GlobalStyle.ts       design tokens as CSS variables (:root) + page reset; rendered once in App
-  App.tsx              hash router (`#/<page-id>`) + nav; renders <SearchTable> per page
+    module-contract.ts AppModule interface (the shell knows only this)
+    search-page/       SearchPage: wires createSearchApi + SearchTable for a page config
+    api/search-api.ts  createSearchApi(division) -> { fetchRows, runAction } (POST /api/divisions/:division/...)
+    blocks/, actions.ts, slots/   reusable blocks, bulk actions, custom cells/editors/dialogs
+    search-table/      generic, page-agnostic table
+      types.ts         all shared types (read first)
+      blocks.ts        block(), pageOptions(), definePage()
+      core/            headless logic: pure functions + reducer, no AG Grid, unit-tested
+        criteria.ts, search-state.ts, selection.ts, match.ts, row-menu.ts, sort.ts, views.ts, dates.ts, island.ts
+      ui/              React/AG Grid layer
+        SearchTable.tsx  wiring only: composes the hooks below and renders
+        hooks/           useServerData, useTableSelection, useSavedViews, useBulkActions, useNotice, useMatchingCount, useStableGridContext
+        FilterBar, filter-kinds, SavedViews, ActionIsland, Popover, selection-column, columns.ts, context-menu.ts, ag-setup, layout.ts
+        styles.ts        shared styled-components; also used by slots
+  mocks/               dev-only MSW: db.ts, engine.ts, handlers.ts, browser.ts (reads pages from module indexes), tests
+  main.tsx             starts MSW (opt-in via VITE_ENABLE_MOCKS), renders app/App
 claude-design/         design prompt/spec (Items_search.html, chat.md) – reference only
 ```
+
+Lint rules (oxlint `no-restricted-imports` overrides): `shared` never imports modules/shell/app; `shell` never imports modules/app; a module imports only `#shared` and its own files (never another module); `app` and `mocks` import a module only via `#modules/<name>/index.ts`. `import/no-cycle` is on.
 
 ### Key design ideas
 
 - **Blocks compose pages.** A `Block` = row property + AG Grid column + optional filter. `definePage({ blocks, idKey, ...})` derives the row type (`RowOf`), filter-field map (`FieldsOf`), `columns`, `fields` and `getRowId`. Each division therefore gets its own row shape and filter set with full type inference. Use `pageOptions()` when keeping options in a separate file to preserve inference.
 - **`FieldMap` typing.** Field id -> filter kind (`text`, `multiSelect`, `idList`, `date`, `boolean`), threaded as `TFields` through all types so filter ids are compile-checked. New filter kinds: extend `FilterKinds` via declaration merging and register a renderer in `ui/filter-kinds.tsx`.
-- **Dumb table, smart parent.** `SearchTable` never fetches; it receives `config`, `fetchRows`, `runAction` (and optional `fetchViewCount`, `viewStorage`). `App.tsx` builds these with `createSearchApi`.
+- **Dumb table, smart parent.** `SearchTable` never fetches; it receives `config`, `fetchRows`, `runAction` (and optional `fetchViewCount`, `viewStorage`). `shared/search-page` builds these with `createSearchApi`.
 - **Search contract.** `SearchQuery` = `{ search, filters, sort, startRow, endRow }` POSTed to the backend; relative date filters are resolved to `between` before sending. Response `{ rows, total }`.
 - **Selection** is either explicit `ids` or `criteria` + `excludedIds`; `SelectionPolicy.selectableWhen` is the single rule: it disables rows in the grid (`isRowSelectable`) and is AND-ed into criteria mode, because the backend never sees rows there. `isSelectable` is only an escape hatch for rules a filter cannot express (grid-only).
 - **Bulk actions** (`defineAction`) have `confirm` of `none` / `inline` / `dialog`; `isApplicable` rows are skipped and reported. The mock backend in `handlers.ts` owns the real applicability rules.
@@ -61,9 +55,9 @@ claude-design/         design prompt/spec (Items_search.html, chat.md) – refer
 
 ### Adding a division page
 
-1. Create `src/divisions/<name>/config.ts` exporting `pageOptions({...})` from shared blocks (add new blocks in `shared/blocks/index.ts`).
-2. Wrap with `definePage` in `divisions/pages.ts` and add it to `registry.ts`.
-3. `mocks/browser.ts` reads `registry.ts` (row keys are derived from the page's columns); make sure `MockItem` in `mocks/db.ts` has every field its blocks use.
+1. Copy `src/modules/division1` to `src/modules/<name>`; in `config.ts` build `pageOptions({...})` from shared blocks (new blocks go to `shared/blocks/index.ts`) and export `definePage(options)`.
+2. Rename the exports/ids in `index.ts` and `routes.tsx`; register the module in `app/modules.ts` (nav and routes follow automatically).
+3. Add the page to the list in `mocks/browser.ts`; make sure `MockItem` in `mocks/db.ts` has every field its blocks use.
 
 ## Conventions
 

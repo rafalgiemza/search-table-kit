@@ -1,4 +1,5 @@
-import { division1, division2 } from './pages.ts'
+import { division1Page as division1 } from '#modules/division1/index.ts'
+import { division2Page as division2 } from '#modules/division2/index.ts'
 
 // Compile-time checks: row shapes and filter sets differ per division.
 division1.getRowId({ id: '1', description: '', status: 'sent', machineLine: 'A' })

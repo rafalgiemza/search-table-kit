@@ -1,5 +1,5 @@
-import { matchesFilters, text } from '../search-table/core/match.ts'
-import type { FilterState, SearchQuery } from '../search-table/types.ts'
+import { matchesFilters, text } from '../shared/search-table/core/match.ts'
+import type { FilterState, SearchQuery } from '../shared/search-table/types.ts'
 
 type Row = Record<string, unknown>
 

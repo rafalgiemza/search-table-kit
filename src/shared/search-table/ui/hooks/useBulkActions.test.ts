@@ -1,4 +1,4 @@
-import '../../../test/setup-dom.ts'
+import '../../../../test/setup-dom.ts'
 import assert from 'node:assert/strict'
 import { useState } from 'react'
 import { afterEach, mock, test } from 'node:test'

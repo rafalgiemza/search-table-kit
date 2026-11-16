@@ -1,4 +1,4 @@
-import { block } from '../../search-table/blocks.ts'
+import { block } from '../search-table/blocks.ts'
 import { PriorityCell, type Priority } from '../slots/PriorityCell.tsx'
 import { PriorityFilterEditor } from '../slots/PriorityFilterEditor.tsx'
 

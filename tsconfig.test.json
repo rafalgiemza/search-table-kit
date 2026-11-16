@@ -9,10 +9,10 @@
   "include": [
     "src/**/*.test.ts",
     "src/test/**/*.ts",
-    "src/search-table/*.ts",
-    "src/search-table/core/**/*.ts",
-    "src/search-table/ui/hooks/**/*.ts",
-    "src/search-table/ui/layout.ts",
-    "src/search-table/ui/grid-constants.ts"
+    "src/shared/search-table/*.ts",
+    "src/shared/search-table/core/**/*.ts",
+    "src/shared/search-table/ui/hooks/**/*.ts",
+    "src/shared/search-table/ui/layout.ts",
+    "src/shared/search-table/ui/grid-constants.ts"
   ]
 }

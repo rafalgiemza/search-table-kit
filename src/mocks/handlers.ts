@@ -4,7 +4,7 @@ import type {
   Selection,
   SearchQuery,
   SearchResult,
-} from '../search-table/types.ts'
+} from '../shared/search-table/types.ts'
 import type { MockDb, MockItem } from './db.ts'
 import { filterAndSort, window } from './engine.ts'
 
