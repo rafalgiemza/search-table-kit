@@ -34,6 +34,23 @@ const NavItem = styled(NavLink)`
     box-shadow: inset 2px 0 var(--accent);
   }
 `
+const Group = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+`
+const GroupLabel = styled.div`
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+`
+const SubItem = styled(NavItem)`
+  padding-left: 20px;
+`
 const Main = styled.main`
   min-width: 0;
   min-height: 0;
@@ -47,9 +64,14 @@ export function AppLayout({ modules }: { modules: AppModule[] }) {
       <Nav aria-label="Divisions">
         <NavBrand>Factory</NavBrand>
         {sorted.map((m) => (
-          <NavItem key={m.id} to={m.basePath}>
-            {m.nav.label}
-          </NavItem>
+          <Group key={m.id}>
+            <GroupLabel>{m.nav.label}</GroupLabel>
+            {m.nav.items.map((item) => (
+              <SubItem key={item.path} to={`${m.basePath}/${item.path}`}>
+                {item.label}
+              </SubItem>
+            ))}
+          </Group>
         ))}
       </Nav>
       <Main>

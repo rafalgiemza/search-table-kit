@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import type { AppModule } from '#shared/module-contract.ts'
+import { divisionNavItems, type AppModule } from '#shared/module-contract.ts'
 
 export { division1Page } from './config.ts'
 
@@ -10,6 +10,6 @@ export { division1Page } from './config.ts'
 export const division1Module: AppModule = {
   id: 'division-1',
   basePath: '/division-1',
-  nav: { label: 'Division 1', order: 1 },
+  nav: { label: 'Division 1', order: 1, items: divisionNavItems },
   Routes: lazy(() => import('./routes.tsx')),
 }
