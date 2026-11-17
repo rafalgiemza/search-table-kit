@@ -1,16 +1,9 @@
-import type { ComponentType, LazyExoticComponent } from 'react'
+import type { ComponentType } from 'react'
 
 export interface NavItem {
   label: string
   path: string
 }
-
-/** Every division has the same three views. */
-export const divisionNavItems: NavItem[] = [
-  { label: 'Dashboard', path: 'dashboard' },
-  { label: 'Search', path: 'search' },
-  { label: 'Run', path: 'run' },
-]
 
 /**
  * Contract between the shell and a feature module.
@@ -28,6 +21,6 @@ export interface AppModule {
     /** Sub-pages shown under the label; `path` is relative to basePath. */
     items: NavItem[]
   }
-  /** Lazy component rendering the module's own <Routes>. One chunk per module. */
-  Routes: LazyExoticComponent<ComponentType>
+  /** Renders the module's own <Routes>; heavy views are lazy inside it. */
+  Routes: ComponentType
 }
