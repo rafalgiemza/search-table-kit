@@ -6,6 +6,9 @@ const enableMocks = async () => {
   // Opt-in via .env (PoC: there is no real backend yet).
   if (import.meta.env.VITE_ENABLE_MOCKS !== 'true') return
   const { worker } = await import('./mocks/browser.ts')
+  // Dev panel: per-handler toggles (mock <-> real network). Must be set up before start().
+  const { setupMswCockpit } = await import('msw-cockpit')
+  setupMswCockpit({ worker })
   await worker.start({
     // The worker file lives under the Vite base path (e.g. /search-table-kit/ on Pages).
     serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },

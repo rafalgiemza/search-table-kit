@@ -20,6 +20,9 @@ importers:
       ag-grid-react:
         specifier: ^36.2.0
         version: 36.2.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      msw-cockpit:
+        specifier: ^0.2.1
+        version: 0.2.1(msw@3.0.2(@types/node@24.19.1)(typescript@6.0.3)(vite@8.3.4(@types/node@24.19.1)))
       react:
         specifier: ^19.2.8
         version: 19.3.0
@@ -648,6 +651,15 @@ packages:
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
+
+  msw-cockpit@0.2.1:
+    resolution: {integrity: sha512-4OBXJ0LLQN3hkPegGi+ofRBCwbSOs3iXDIjFZgB7xmL+5GcAqzsESr5aLm9Uh4Tt+0SAfZsIgB6rD2KKFIbxIg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      msw: '>=1.0.0'
+    peerDependenciesMeta:
+      msw:
+        optional: true
 
   msw@3.0.2:
     resolution: {integrity: sha512-/74rddlgCmlHvrXUkuYKoUjDJTiP4Nrz2uyIpOTLtxJNCS+2yY+DlLfzzRUc61cvRjCo6Jvi2+vRNZyZQa1j4A==}
@@ -1336,6 +1348,10 @@ snapshots:
   lz-string@1.5.0: {}
 
   ms@2.1.3: {}
+
+  msw-cockpit@0.2.1(msw@3.0.2(@types/node@24.19.1)(typescript@6.0.3)(vite@8.3.4(@types/node@24.19.1))):
+    optionalDependencies:
+      msw: 3.0.2(@types/node@24.19.1)(typescript@6.0.3)(vite@8.3.4(@types/node@24.19.1))
 
   msw@3.0.2(@types/node@24.19.1)(typescript@6.0.3)(vite@8.3.4(@types/node@24.19.1)):
     dependencies:
