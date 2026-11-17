@@ -1,15 +1,12 @@
-import { lazy } from 'react'
-import { divisionNavItems, type AppModule } from '#shared/module-contract.ts'
+import { defineDivision } from '#shared/division/define-division.tsx'
+import { division2Page } from './config.ts'
 
 export { division2Page } from './config.ts'
 
-/**
- * Public API of the module; nothing else may be imported from outside (lint).
- * Keep it light: it loads with the shell, the table code is in the lazy chunk.
- */
-export const division2Module: AppModule = {
+/** Public API of the module (the only entry allowed from outside, see lint). */
+export const division2Module = defineDivision({
   id: 'division-2',
-  basePath: '/division-2',
-  nav: { label: 'Division 2', order: 2, items: divisionNavItems },
-  Routes: lazy(() => import('./routes.tsx')),
-}
+  label: 'Division 2',
+  order: 2,
+  page: division2Page,
+})
